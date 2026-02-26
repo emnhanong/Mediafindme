@@ -526,7 +526,7 @@ textarea{resize:vertical;min-height:65px;}
               <button class="btn btn-ghost btn-sm" onclick="clearProjSel()">✕ Bỏ chọn</button>
             </div>
             <div class="table-wrap"><table>
-              <thead><tr><th style="width:36px"><div class="cb-wrap"><input type="checkbox" id="projChkAll" onchange="toggleAllProj(this)"></div></th><th>Dự án</th><th>Khách hàng</th><th>Sales</th><th>CK1</th><th>CK2</th><th>Tổng CK</th><th>Hosting</th><th>Domain</th><th>CP khác</th><th>Lợi nhuận</th><th>Ghi chú</th><th>Thao tác</th></tr></thead>
+              <thead><tr><th style="width:36px"><div class="cb-wrap"><input type="checkbox" id="projChkAll" onchange="toggleAllProj(this)"></div></th><th>Dự án</th><th>Khách hàng</th><th>Sales</th><th>CK1</th><th>CK2</th><th>CK3</th><th>Tổng CK</th><th>Hosting</th><th>Domain</th><th>CP khác</th><th>Lợi nhuận</th><th>Ghi chú</th><th>Thao tác</th></tr></thead>
               <tbody id="projTb"></tbody>
             </table></div>
           </div>
@@ -862,8 +862,9 @@ textarea{resize:vertical;min-height:65px;}
       <!-- MODE SELECTOR -->
       <div style="font-size:11px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📋 Đợt thanh toán</div>
       <div class="proj-ck-mode">
-        <div class="ck-mode-btn active" id="modeBtn1" onclick="setProjMode(1)">💳 Chỉ CK đợt 1</div>
-        <div class="ck-mode-btn" id="modeBtn2" onclick="setProjMode(2)">💳💳 CK 2 đợt</div>
+        <div class="ck-mode-btn active" id="modeBtn1" onclick="setProjMode(1)">💳 1 đợt</div>
+        <div class="ck-mode-btn" id="modeBtn2" onclick="setProjMode(2)">💳💳 2 đợt</div>
+        <div class="ck-mode-btn" id="modeBtn3" onclick="setProjMode(3)">💳💳💳 3 đợt</div>
       </div>
 
       <!-- CK 1 -->
@@ -880,7 +881,16 @@ textarea{resize:vertical;min-height:65px;}
         <div class="ck-phase-title"><span class="phase-dot ck2"></span>Đợt 2</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div class="form-group"><label>CK lần 2 (₫)</label><div class="money-wrap"><input id="pCk2" type="text" inputmode="numeric" placeholder="0" oninput="fmtInput(this,'pCk2H');calcProjSplit()"></div><div class="money-hint" id="pCk2H"></div></div>
-          <div class="form-group"><label>Ngày bàn giao</label><input id="pEnd" type="date"></div>
+          <div class="form-group"><label>Ngày bàn giao (đợt 2)</label><input id="pEnd" type="date"></div>
+        </div>
+      </div>
+
+      <!-- CK 3 (chỉ hiện khi mode 3) -->
+      <div class="ck-phase" id="ckPhase3" style="display:none">
+        <div class="ck-phase-title"><span class="phase-dot" style="background:var(--orange)"></span>Đợt 3</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="form-group"><label>CK lần 3 (₫)</label><div class="money-wrap"><input id="pCk3" type="text" inputmode="numeric" placeholder="0" oninput="fmtInput(this,'pCk3H');calcProjSplit()"></div><div class="money-hint" id="pCk3H"></div></div>
+          <div class="form-group"><label>Ngày bàn giao (đợt 3)</label><input id="pEnd3" type="date"></div>
         </div>
       </div>
 
@@ -1179,7 +1189,7 @@ const PST   = {pending:'⏳ Chờ',inprogress:'🔧 Đang làm',done:'✅ Bàn g
 const PLS   = [{key:'new',l:'Lead mới',c:'#4f8ef7'},{key:'contact',l:'Liên hệ',c:'#f5b942'},{key:'consult',l:'Tư vấn',c:'#7c5af5'},{key:'contract',l:'Hợp đồng',c:'#f5823a'},{key:'dev',l:'Triển khai',c:'#7ab8ff'},{key:'done',l:'Bàn giao',c:'#2ecc8a'}];
 const PGMAP = {dashboard:'Tổng quan',pipeline:'Pipeline KH',customers:'Khách hàng',projects:'Dự án & Tài chính',followup:'Follow-up',sales:'Hiệu suất Sales',debt:'Công nợ',settings:'⚙️ Cài đặt & Firebase'};
 const SCOL  = ['#4f8ef7','#7c5af5','#2ecc8a','#f5b942','#f25c5c','#f5823a'];
-function profit(p){return ((p.ck1||0)+(p.ck2||0))-((p.host||0)+(p.dom||0)+(p.oth||0));}
+function profit(p){return ((p.ck1||0)+(p.ck2||0)+(p.ck3||0))-((p.host||0)+(p.dom||0)+(p.oth||0));}
 function sName(id){const s=S.find(x=>x.id===id);return s?s.name:'—';}
 let editPId=null;
 
@@ -1289,17 +1299,22 @@ function saveProj(){
   const name=document.getElementById('pName').value.trim();
   const cId=parseInt(document.getElementById('pCust').value);
   if(!name||!cId){alert('Nhập tên và chọn KH!');return;}
-  const pEnd = _projMode===2 ? document.getElementById('pEnd').value : document.getElementById('pEndSingle').value;
+  const pEnd = _projMode===3 ? document.getElementById('pEnd3').value
+             : _projMode===2 ? document.getElementById('pEnd').value
+             : document.getElementById('pEndSingle').value;
   const np={id:editPId||Date.now(),name,cId,sId:parseInt(document.getElementById('pSales').value)||null,
-    ck1:getF('pCk1'),ck2:_projMode===2?getF('pCk2'):0,total:getF('pTotal'),
+    ck1:getF('pCk1'),
+    ck2:_projMode>=2?getF('pCk2'):0,
+    ck3:_projMode===3?getF('pCk3'):0,
+    total:getF('pTotal'),
     host:getF('pHost'),dom:getF('pDom'),oth:getF('pOth'),
     note:document.getElementById('pNote').value.trim(),
     sd:document.getElementById('pStart').value,ed:pEnd,
     st:document.getElementById('pSt').value};
   if(editPId){const i=P.findIndex(x=>x.id===editPId);P[i]=np;editPId=null;}else P.push(np);
   save();closeM('mAddProj');
-  ['pName','pCk1','pCk2','pTotal','pHost','pDom','pOth','pNote','pStart','pEnd','pEndSingle'].forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});
-  ['pCk1H','pCk2H','pTotalH','pHostH','pDomH','pOthH'].forEach(i=>{const e=document.getElementById(i);if(e)e.textContent='';});
+  ['pName','pCk1','pCk2','pCk3','pTotal','pHost','pDom','pOth','pNote','pStart','pEnd','pEnd3','pEndSingle'].forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});
+  ['pCk1H','pCk2H','pCk3H','pTotalH','pHostH','pDomH','pOthH'].forEach(i=>{const e=document.getElementById(i);if(e)e.textContent='';});
   document.getElementById('projSplitInfo').style.display='none';
   setProjMode(1);
   render('projects');
@@ -1311,15 +1326,17 @@ function editProj(id){
   document.getElementById('pName').value=p.name;
   document.getElementById('pCust').value=p.cId;
   document.getElementById('pSales').value=p.sId||'';
-  setF('pCk1','pCk1H',p.ck1);setF('pCk2','pCk2H',p.ck2);setF('pTotal','pTotalH',p.total);
+  setF('pCk1','pCk1H',p.ck1);setF('pCk2','pCk2H',p.ck2||0);setF('pCk3','pCk3H',p.ck3||0);
+  setF('pTotal','pTotalH',p.total);
   setF('pHost','pHostH',p.host);setF('pDom','pDomH',p.dom);setF('pOth','pOthH',p.oth);
   document.getElementById('pNote').value=p.note;
   document.getElementById('pStart').value=p.sd||'';
   document.getElementById('pSt').value=p.st;
-  // Detect mode: nếu có CK2 thì mode 2
-  const mode = (p.ck2 && p.ck2 > 0) ? 2 : 1;
+  // Detect mode từ data
+  const mode = (p.ck3&&p.ck3>0) ? 3 : (p.ck2&&p.ck2>0) ? 2 : 1;
   setProjMode(mode);
-  if(mode===2) { document.getElementById('pEnd').value=p.ed||''; }
+  if(mode===3) { document.getElementById('pEnd3').value=p.ed||''; }
+  else if(mode===2) { document.getElementById('pEnd').value=p.ed||''; }
   else { document.getElementById('pEndSingle').value=p.ed||''; }
   calcProjSplit();
   document.getElementById('mAddProj').classList.add('open');
@@ -1469,73 +1486,90 @@ function setProjMode(m) {
   _projMode = m;
   document.getElementById('modeBtn1').classList.toggle('active', m===1);
   document.getElementById('modeBtn2').classList.toggle('active', m===2);
-  document.getElementById('ckPhase2').style.display = m===2 ? 'block' : 'none';
+  document.getElementById('modeBtn3').classList.toggle('active', m===3);
+  document.getElementById('ckPhase2').style.display = m>=2 ? 'block' : 'none';
+  document.getElementById('ckPhase3').style.display = m===3 ? 'block' : 'none';
   document.getElementById('pEndWrap').style.display = m===1 ? 'block' : 'none';
-  if(m===1){ document.getElementById('pCk2').value=''; document.getElementById('pCk2H').textContent=''; }
+  if(m===1){
+    document.getElementById('pCk2').value=''; document.getElementById('pCk2H').textContent='';
+    document.getElementById('pCk3').value=''; document.getElementById('pCk3H').textContent='';
+  }
+  if(m===2){
+    document.getElementById('pCk3').value=''; document.getElementById('pCk3H').textContent='';
+  }
   calcProjSplit();
 }
 function calcProjSplit() {
-  const ck1 = getF('pCk1'), ck2 = getF('pCk2');
+  const ck1 = getF('pCk1'), ck2 = getF('pCk2'), ck3 = getF('pCk3');
   const host = getF('pHost'), dom = getF('pDom'), oth = getF('pOth');
   const totalCost = host + dom + oth;
-  // Chi phí luôn chia đôi cho mỗi đợt (dù 1 hay 2 đợt)
-  const halfHost = Math.round(host / 2);
-  const halfDom  = Math.round(dom  / 2);
-  const halfOth  = Math.round(oth  / 2);
-  const half = halfHost + halfDom + halfOth;           // chi phí 1 đợt
-  const half2 = totalCost - half;                      // đợt còn lại (làm tròn lẻ)
   const info = document.getElementById('projSplitInfo');
   const rows = document.getElementById('projSplitRows');
-  if(!ck1 && !ck2) { info.style.display='none'; return; }
+  if(!ck1 && !ck2 && !ck3) { info.style.display='none'; return; }
   info.style.display = 'block';
 
-  // Helper: render chi tiết chi phí đợt
+  // Chia chi phí đều theo số đợt
+  const parts = _projMode; // 1, 2, hoặc 3
+  const costPerPart = Math.round(totalCost / parts);
+
+  // Helper: render chi tiết chi phí mỗi đợt
   function costDetail(h, d, o) {
-    if(!h && !d && !o) return '';
     let s = '';
-    if(h) s += `<div class="cost-split-row" style="font-size:11px;color:var(--text3)"><span style="padding-left:14px">🖥 Hosting (½)</span><span style="color:var(--red)">−${fmtM(h)}</span></div>`;
-    if(d) s += `<div class="cost-split-row" style="font-size:11px;color:var(--text3)"><span style="padding-left:14px">🌐 Domain (½)</span><span style="color:var(--red)">−${fmtM(d)}</span></div>`;
-    if(o) s += `<div class="cost-split-row" style="font-size:11px;color:var(--text3)"><span style="padding-left:14px">📦 CP khác (½)</span><span style="color:var(--red)">−${fmtM(o)}</span></div>`;
+    if(h) s += `<div class="cost-split-row" style="font-size:11px;color:var(--text3)"><span style="padding-left:14px">🖥 Hosting (÷${parts})</span><span style="color:var(--red)">−${fmtM(h)}</span></div>`;
+    if(d) s += `<div class="cost-split-row" style="font-size:11px;color:var(--text3)"><span style="padding-left:14px">🌐 Domain (÷${parts})</span><span style="color:var(--red)">−${fmtM(d)}</span></div>`;
+    if(o) s += `<div class="cost-split-row" style="font-size:11px;color:var(--text3)"><span style="padding-left:14px">📦 CP khác (÷${parts})</span><span style="color:var(--red)">−${fmtM(o)}</span></div>`;
     return s;
   }
 
+  // Chi phí chia đều từng khoản cho mỗi đợt
+  const hPart = Math.round(host / parts);
+  const dPart = Math.round(dom  / parts);
+  const oPart = Math.round(oth  / parts);
+  // Đợt cuối nhận phần còn lại (xử lý làm tròn)
+  const hLast = host - hPart * (parts - 1);
+  const dLast = dom  - dPart * (parts - 1);
+  const oLast = oth  - oPart * (parts - 1);
+  const costLast = hLast + dLast + oLast;
+
   let html = '';
+
+  function renderPhase(label, ck, h, d, o, isLast) {
+    if(!ck) return '';
+    const cost = h + d + o;
+    const prf = ck - cost;
+    let s = '';
+    s += `<div class="cost-split-row"><span>💳 ${label} nhận về</span><span>${fmtM(ck)}</span></div>`;
+    if(cost) {
+      s += `<div class="cost-split-row"><span>🔻 Chi phí ${label.toLowerCase()} (÷${parts})</span><span style="color:var(--red)">−${fmtM(cost)}</span></div>`;
+      s += costDetail(h, d, o);
+    }
+    s += `<div class="cost-split-row"><span>📈 Lợi nhuận ${label.toLowerCase()}</span><span style="color:${prf>=0?'var(--green)':'var(--red)'};">${fmtM(prf)}</span></div>`;
+    return s;
+  }
+
   if(_projMode === 1) {
-    // Mode 1 đợt: chi phí chia đôi (½ tính vào đợt này)
-    const prf = ck1 - half;
-    html += `<div class="cost-split-row"><span>💳 Đợt 1 nhận về</span><span>${fmtM(ck1)}</span></div>`;
-    if(half) {
-      html += `<div class="cost-split-row"><span>🔻 Chi phí đợt 1 (½ tổng)</span><span style="color:var(--red)">−${fmtM(half)}</span></div>`;
-      html += costDetail(halfHost, halfDom, halfOth);
-    }
-    html += `<div class="cost-split-row total"><span>📈 Lợi nhuận đợt 1</span><span style="color:${prf>=0?'var(--green)':'var(--red)'};">${fmtM(prf)}</span></div>`;
-  } else {
-    // Mode 2 đợt: mỗi đợt chia đôi chi phí
-    const prf1 = ck1 - half;
-    const prf2 = ck2 - half2;
-    const prfTot = (ck1 + ck2) - totalCost;
-    if(ck1) {
-      html += `<div class="cost-split-row"><span>💳 Đợt 1 nhận về</span><span>${fmtM(ck1)}</span></div>`;
-      if(half) {
-        html += `<div class="cost-split-row"><span>🔻 Chi phí đợt 1 (½)</span><span style="color:var(--red)">−${fmtM(half)}</span></div>`;
-        html += costDetail(halfHost, halfDom, halfOth);
-      }
-      html += `<div class="cost-split-row"><span>📈 Lợi nhuận đợt 1</span><span style="color:${prf1>=0?'var(--green)':'var(--red)'};">${fmtM(prf1)}</span></div>`;
-    }
-    if(ck2) {
-      html += `<div style="height:6px"></div>`;
-      html += `<div class="cost-split-row"><span>💳 Đợt 2 nhận về</span><span>${fmtM(ck2)}</span></div>`;
-      if(half2) {
-        html += `<div class="cost-split-row"><span>🔻 Chi phí đợt 2 (½)</span><span style="color:var(--red)">−${fmtM(half2)}</span></div>`;
-        html += costDetail(host-halfHost, dom-halfDom, oth-halfOth);
-      }
-      html += `<div class="cost-split-row"><span>📈 Lợi nhuận đợt 2</span><span style="color:${prf2>=0?'var(--green)':'var(--red)'};">${fmtM(prf2)}</span></div>`;
-    }
+    html += renderPhase('Đợt 1', ck1, hPart, dPart, oPart, true);
+  } else if(_projMode === 2) {
+    html += renderPhase('Đợt 1', ck1, hPart, dPart, oPart, false);
+    if(ck2) { html += `<div style="height:6px"></div>`; html += renderPhase('Đợt 2', ck2, hLast, dLast, oLast, true); }
     if(ck1 && ck2) {
+      const tot = (ck1+ck2) - totalCost;
       html += `<div style="height:6px;border-top:1.5px dashed #bbf7d0;margin:4px 0"></div>`;
-      html += `<div class="cost-split-row total"><span>🏆 Tổng lợi nhuận 2 đợt</span><span style="color:${prfTot>=0?'var(--accent)':'var(--red)'};">${fmtM(prfTot)}</span></div>`;
+      html += `<div class="cost-split-row total"><span>🏆 Tổng lợi nhuận</span><span style="color:${tot>=0?'var(--accent)':'var(--red)'};">${fmtM(tot)}</span></div>`;
+    }
+  } else {
+    // 3 đợt
+    html += renderPhase('Đợt 1', ck1, hPart, dPart, oPart, false);
+    if(ck2) { html += `<div style="height:6px"></div>`; html += renderPhase('Đợt 2', ck2, hPart, dPart, oPart, false); }
+    if(ck3) { html += `<div style="height:6px"></div>`; html += renderPhase('Đợt 3', ck3, hLast, dLast, oLast, true); }
+    const ckSum = (ck1||0)+(ck2||0)+(ck3||0);
+    if((ck1&&ck2)||(ck1&&ck3)||(ck2&&ck3)) {
+      const tot = ckSum - totalCost;
+      html += `<div style="height:6px;border-top:1.5px dashed #bbf7d0;margin:4px 0"></div>`;
+      html += `<div class="cost-split-row total"><span>🏆 Tổng lợi nhuận</span><span style="color:${tot>=0?'var(--accent)':'var(--red)'};">${fmtM(tot)}</span></div>`;
     }
   }
+
   rows.innerHTML = html;
 }
 window.calcProjSplit = calcProjSplit;
@@ -1633,9 +1667,9 @@ function renderDash(){
   const filterDesc=[lbl,salesName].filter(Boolean).join(' · ');
   const filterEl=document.getElementById('dashFilterLabel');
   if(filterEl)filterEl.innerHTML=filterDesc&&filterDesc!=='Tất cả'?`<span class="filter-active-tag">📌 ${filterDesc}</span>`:'';
-  const rev=fp.reduce((s,p)=>s+(p.ck1||0)+(p.ck2||0),0);
+  const rev=fp.reduce((s,p)=>s+(p.ck1||0)+(p.ck2||0)+(p.ck3||0),0);
   const prf=fp.reduce((s,p)=>s+profit(p),0);
-  const dbt=fp.reduce((s,p)=>s+Math.max(0,(p.total||0)-((p.ck1||0)+(p.ck2||0))),0);
+  const dbt=fp.reduce((s,p)=>s+Math.max(0,(p.total||0)-((p.ck1||0)+(p.ck2||0)+(p.ck3||0))),0);
   const dn=fc.filter(c=>c.status==='done').length;
   document.getElementById('statsGrid').innerHTML=`
     <div class="stat-card"><div class="stat-label">Tổng KH</div><div class="stat-value blue">${fc.length}</div><div class="stat-sub">${dn} đã chốt · ${filterDesc||'Tất cả'}</div></div>
@@ -1647,7 +1681,7 @@ function renderDash(){
   const cntEl=document.getElementById('dashProjCnt');
   if(cntEl)cntEl.textContent=fp.length+' dự án';
   document.getElementById('dashProjTb').innerHTML=fp.length?[...fp].reverse().map(p=>{
-    const c=C.find(x=>x.id===p.cId);const pf=profit(p);const rv=(p.ck1||0)+(p.ck2||0);const db=Math.max(0,(p.total||0)-rv);
+    const c=C.find(x=>x.id===p.cId);const pf=profit(p);const rv=(p.ck1||0)+(p.ck2||0)+(p.ck3||0);const db=Math.max(0,(p.total||0)-rv);
     return`<tr><td><strong>${p.name}</strong></td><td>${c?c.name:'—'}</td><td style="font-size:12px">${sName(p.sId)}</td><td class="mono" style="color:var(--green)">${fmtM(rv)}</td><td class="loin ${pf>=0?'pos':'neg'}">${fmtM(pf)}</td><td class="mono ${db>0?'loin neg':''}">${db>0?fmtM(db):'<span style="color:var(--green)">✅</span>'}</td><td><span class="badge badge-new">${PST[p.st]||p.st}</span></td></tr>`;
   }).join(''):'<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text3)">Không có dự án trong kỳ này</td></tr>';
   const sbEl=document.getElementById('dashSalesBreak');
@@ -1659,10 +1693,10 @@ function renderDash(){
       const sp=fp.filter(p=>p.sId===s.id);
       const sc2=fc.filter(c=>c.sId===s.id);
       const dn2=sc2.filter(c=>c.status==='done').length;
-      const rv2=sp.reduce((sum,p)=>sum+(p.ck1||0)+(p.ck2||0),0);
+      const rv2=sp.reduce((sum,p)=>sum+(p.ck1||0)+(p.ck2||0)+(p.ck3||0),0);
       const tc2=sp.reduce((sum,p)=>sum+(p.total||0),0);
       const cp2=sp.reduce((sum,p)=>sum+(p.host||0)+(p.dom||0)+(p.oth||0),0);
-      const pf2=rv2-cp2;const db2=sp.reduce((sum,p)=>sum+Math.max(0,(p.total||0)-((p.ck1||0)+(p.ck2||0))),0);
+      const pf2=rv2-cp2;const db2=sp.reduce((sum,p)=>sum+Math.max(0,(p.total||0)-((p.ck1||0)+(p.ck2||0)+(p.ck3||0))),0);
       const cr=sc2.length?Math.round(dn2/sc2.length*100):0;
       const ini=s.name.split(' ').map(x=>x[0]).slice(-2).join('').toUpperCase();
       return`<tr><td><div style="display:flex;align-items:center;gap:7px"><div style="width:26px;height:26px;border-radius:50%;background:${SCOL[ci%SCOL.length]};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#fff">${ini}</div><strong>${s.name}</strong></div></td>
@@ -1719,23 +1753,23 @@ function renderCust(){
 // ===== PROJECTS =====
 function renderProj(){
   document.getElementById('projTb').innerHTML=P.length?P.map(p=>{
-    const c=C.find(x=>x.id===p.cId);const pf=profit(p);const rv=(p.ck1||0)+(p.ck2||0);
+    const c=C.find(x=>x.id===p.cId);const pf=profit(p);const rv=(p.ck1||0)+(p.ck2||0)+(p.ck3||0);
     return`<tr>
       <td><div class="cb-wrap"><input type="checkbox" class="proj-chk" data-id="${p.id}" ${_projSel.has(p.id)?'checked':''} onchange="toggleProjChk(${p.id},this)"></div></td>
       <td><strong>${p.name}</strong><div style="font-size:11px;color:var(--text3);margin-top:1px">${PST[p.st]||p.st}</div></td>
       <td>${c?c.name:'—'}</td><td style="font-size:12px">${sName(p.sId)}</td>
-      <td class="mono">${fmtM(p.ck1)}</td><td class="mono">${p.ck2?fmtM(p.ck2):'—'}</td>
+      <td class="mono">${fmtM(p.ck1)}</td><td class="mono">${p.ck2?fmtM(p.ck2):'—'}</td><td class="mono">${p.ck3?fmtM(p.ck3):'—'}</td>
       <td class="mono" style="color:var(--accent)">${fmtM(rv)}</td>
       <td class="mono" style="color:var(--red)">-${fmtM(p.host)}</td><td class="mono" style="color:var(--red)">-${fmtM(p.dom)}</td><td class="mono" style="color:var(--red)">-${fmtM(p.oth)}</td>
       <td><div class="loin ${pf>=0?'pos':'neg'}">${fmtM(pf)}</div><div class="profit-bar"><div class="profit-fill" style="width:${p.total?Math.min(100,rv/p.total*100):0}%;background:${pf>=0?'var(--green)':'var(--red)'}"></div></div></td>
       <td style="font-size:12px;color:var(--text2);max-width:110px">${p.note||'—'}</td>
       <td><div class="inline-actions"><button class="btn btn-ghost btn-sm" onclick="editProj(${p.id})">✏️</button><button class="btn btn-danger btn-sm" onclick="delProj(${p.id})">🗑</button></div></td>
     </tr>`;}).join(''):'<tr><td colspan="13" style="text-align:center;padding:32px;color:var(--text3)">Chưa có dự án</td></tr>';
-  const rv=P.reduce((s,p)=>s+(p.ck1||0)+(p.ck2||0),0);
+  const rv=P.reduce((s,p)=>s+(p.ck1||0)+(p.ck2||0)+(p.ck3||0),0);
   const cp=P.reduce((s,p)=>s+(p.host||0)+(p.dom||0)+(p.oth||0),0);
   const tc=P.reduce((s,p)=>s+(p.total||0),0);
   document.getElementById('finStats').innerHTML=`<div class="stat-card"><div class="stat-label">Tổng HĐ</div><div class="stat-value blue">${fmtM(tc)}</div></div><div class="stat-card"><div class="stat-label">Đã nhận</div><div class="stat-value green">${fmtM(rv)}</div></div><div class="stat-card"><div class="stat-label">Tổng CP</div><div class="stat-value red">${fmtM(cp)}</div></div><div class="stat-card"><div class="stat-label">Lợi nhuận</div><div class="stat-value ${rv-cp>=0?'green':'red'}">${fmtM(rv-cp)}</div></div>`;
-  document.getElementById('finChart').innerHTML=P.map(p=>{const pf=profit(p);const rv=(p.ck1||0)+(p.ck2||0);const pc=p.total?Math.round(rv/p.total*100):(rv>0?100:0);return`<div style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="font-weight:600">${p.name}</span><span class="loin ${pf>=0?'pos':'neg'}">${fmtM(pf)}</span></div><div style="display:flex;gap:6px;font-size:11px;color:var(--text3);margin-bottom:4px;flex-wrap:wrap"><span>HĐ:${fmtM(p.total)}</span><span>Đã nhận:${fmtM(rv)}(${pc}%)</span><span>CP:${fmtM((p.host||0)+(p.dom||0)+(p.oth||0))}</span></div><div class="profit-bar" style="height:8px"><div class="profit-fill" style="width:${pc}%;background:${pf>=0?'var(--green)':'var(--red)'}"></div></div></div>`;}).join('')||'<div style="color:var(--text3);text-align:center;padding:24px">Chưa có dự án</div>';
+  document.getElementById('finChart').innerHTML=P.map(p=>{const pf=profit(p);const rv=(p.ck1||0)+(p.ck2||0)+(p.ck3||0);const pc=p.total?Math.round(rv/p.total*100):(rv>0?100:0);return`<div style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="font-weight:600">${p.name}</span><span class="loin ${pf>=0?'pos':'neg'}">${fmtM(pf)}</span></div><div style="display:flex;gap:6px;font-size:11px;color:var(--text3);margin-bottom:4px;flex-wrap:wrap"><span>HĐ:${fmtM(p.total)}</span><span>Đã nhận:${fmtM(rv)}(${pc}%)</span><span>CP:${fmtM((p.host||0)+(p.dom||0)+(p.oth||0))}</span></div><div class="profit-bar" style="height:8px"><div class="profit-fill" style="width:${pc}%;background:${pf>=0?'var(--green)':'var(--red)'}"></div></div></div>`;}).join('')||'<div style="color:var(--text3);text-align:center;padding:24px">Chưa có dự án</div>';
 }
 
 // ===== FOLLOW-UP =====
@@ -1776,7 +1810,7 @@ function renderSales(){
   const stats=S.map(s=>{
     const sp=fp.filter(p=>p.sId===s.id);const sc=C.filter(c=>c.sId===s.id);
     const dn=sc.filter(c=>c.status==='done').length;
-    const rv=sp.reduce((sum,p)=>sum+(p.ck1||0)+(p.ck2||0),0);
+    const rv=sp.reduce((sum,p)=>sum+(p.ck1||0)+(p.ck2||0)+(p.ck3||0),0);
     const tc=sp.reduce((sum,p)=>sum+(p.total||0),0);
     const pf=sp.reduce((sum,p)=>sum+profit(p),0);
     return{...s,sp,sc,dn,rv,tc,pf};
@@ -1808,7 +1842,7 @@ function renderSales(){
   document.getElementById('slProjList').innerHTML=stats.map(s=>{
     if(!s.sp.length)return'';
     return`<div style="margin-bottom:18px"><div style="font-weight:700;font-size:14px;margin-bottom:9px;color:var(--text2);border-bottom:1px solid var(--border);padding-bottom:5px">👤 ${s.name} – ${s.sp.length} dự án</div>
-    ${s.sp.map(p=>{const c=C.find(x=>x.id===p.cId);const pf=profit(p);return`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--surface2);flex-wrap:wrap;gap:6px"><div><strong style="font-size:13px">${p.name}</strong><span style="font-size:11px;color:var(--text3);margin-left:7px">${c?c.name:'—'} • ${PST[p.st]||p.st}</span></div><div style="display:flex;gap:14px;font-family:'JetBrains Mono',monospace;font-size:12px"><span style="color:var(--accent)">+${fmtM((p.ck1||0)+(p.ck2||0))}</span><span class="${pf>=0?'loin pos':'loin neg'}">${fmtM(pf)}</span></div></div>`;}).join('')}
+    ${s.sp.map(p=>{const c=C.find(x=>x.id===p.cId);const pf=profit(p);return`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--surface2);flex-wrap:wrap;gap:6px"><div><strong style="font-size:13px">${p.name}</strong><span style="font-size:11px;color:var(--text3);margin-left:7px">${c?c.name:'—'} • ${PST[p.st]||p.st}</span></div><div style="display:flex;gap:14px;font-family:'JetBrains Mono',monospace;font-size:12px"><span style="color:var(--accent)">+${fmtM((p.ck1||0)+(p.ck2||0)+(p.ck3||0))}</span><span class="${pf>=0?'loin pos':'loin neg'}">${fmtM(pf)}</span></div></div>`;}).join('')}
     </div>`;
   }).join('')||'<div style="color:var(--text3);text-align:center;padding:24px">Không có dự án trong kỳ</div>';
 }
@@ -1826,7 +1860,7 @@ function renderDebt(){
   const stF=document.getElementById('debtStatus')?.value||'';
   let fp=P.filter(p=>dashInPeriod(p.sd||p.ed||'',period));
   if(sIdF)fp=fp.filter(p=>p.sId===sIdF);
-  let dp=fp.map(p=>({...p,rv:(p.ck1||0)+(p.ck2||0),db:Math.max(0,(p.total||0)-((p.ck1||0)+(p.ck2||0)))}));
+  let dp=fp.map(p=>({...p,rv:(p.ck1||0)+(p.ck2||0)+(p.ck3||0),db:Math.max(0,(p.total||0)-((p.ck1||0)+(p.ck2||0)+(p.ck3||0)))}));
   if(stF==='debt')dp=dp.filter(p=>p.db>0);
   if(stF==='paid')dp=dp.filter(p=>p.db===0);
   const lbl=dashPeriodLabel(period);
@@ -1846,7 +1880,7 @@ function renderDebt(){
     sbEl.style.display='block';
     const sbLbl=document.getElementById('debtSalesBreakLabel');
     if(sbLbl)sbLbl.textContent=filterDesc&&filterDesc!=='Tất cả'?'Kỳ: '+filterDesc:'';
-    const fpRaw=P.filter(p=>dashInPeriod(p.sd||p.ed||'',period)).map(p=>({...p,rv:(p.ck1||0)+(p.ck2||0),db:Math.max(0,(p.total||0)-((p.ck1||0)+(p.ck2||0)))}));
+    const fpRaw=P.filter(p=>dashInPeriod(p.sd||p.ed||'',period)).map(p=>({...p,rv:(p.ck1||0)+(p.ck2||0)+(p.ck3||0),db:Math.max(0,(p.total||0)-((p.ck1||0)+(p.ck2||0)+(p.ck3||0)))}));
     document.getElementById('debtSalesTb').innerHTML=S.map((s,i)=>{
       const sp=fpRaw.filter(p=>p.sId===s.id);
       const ini=s.name.split(' ').map(x=>x[0]).slice(-2).join('').toUpperCase();
