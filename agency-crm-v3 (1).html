@@ -80,14 +80,42 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
 .content{padding:20px;flex:1;}
 .page{display:none;}.page.active{display:block;}
 
-/* ===== FILTER BAR ===== */
-.filter-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;box-shadow:var(--shadow-sm);}
-.filter-bar-icon{color:var(--text3);}
-.filter-bar select,.filter-bar-select{padding:7px 10px;font-size:13px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--surface2);font-family:'Nunito',sans-serif;font-weight:600;color:var(--text);outline:none;cursor:pointer;transition:border-color .15s;}
+/* ===== FILTER BAR — compact inline ===== */
+.filter-bar{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
+.filter-bar-icon{color:var(--text3);flex-shrink:0;}
+.filter-bar select,.filter-bar-select{padding:6px 10px;font-size:13px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--surface);font-family:'Nunito',sans-serif;font-weight:600;color:var(--text);outline:none;cursor:pointer;transition:border-color .15s;box-shadow:var(--shadow-sm);}
 .filter-bar select:focus,.filter-bar-select:focus{border-color:var(--accent);}
-.filter-label{font-size:12px;color:var(--text3);font-weight:600;padding:3px 0;}
-.filter-reset{margin-left:auto;padding:6px 12px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--surface2);font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;font-family:'Nunito',sans-serif;transition:all .15s;}
+.filter-active-tag{display:inline-flex;align-items:center;gap:5px;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:700;color:var(--accent);}
+.filter-reset{padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface);font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;font-family:'Nunito',sans-serif;transition:all .15s;box-shadow:var(--shadow-sm);}
 .filter-reset:hover{color:var(--accent);border-color:var(--accent);}
+
+/* ===== CHECKBOX SELECT + BULK ACTIONS ===== */
+.bulk-bar{display:none;align-items:center;gap:8px;padding:8px 14px;background:#fffbeb;border:1.5px solid #fde68a;border-radius:var(--radius-sm);margin-bottom:10px;flex-wrap:wrap;}
+.bulk-bar.show{display:flex;}
+.bulk-cnt{font-weight:700;font-size:13px;color:var(--text);}
+.cb-wrap{display:flex;align-items:center;justify-content:center;width:18px;height:18px;}
+.cb-wrap input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--accent);}
+.undo-bar{display:none;position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;border-radius:20px;padding:10px 18px;font-size:13px;font-weight:700;z-index:5000;box-shadow:0 8px 32px rgba(0,0,0,.25);align-items:center;gap:12px;white-space:nowrap;}
+.undo-bar.show{display:flex;}
+.undo-btn{background:var(--yellow);color:#1e293b;border:none;border-radius:12px;padding:5px 14px;font-family:'Nunito',sans-serif;font-size:12px;font-weight:800;cursor:pointer;}
+.undo-btn:hover{opacity:.9;}
+.undo-close{background:none;border:none;color:#94a3b8;cursor:pointer;font-size:16px;line-height:1;padding:2px 4px;}
+
+/* ===== PROJECT COST SPLIT UI ===== */
+.cost-split-info{background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:var(--radius-sm);padding:10px 14px;margin-top:10px;font-size:12px;}
+.cost-split-title{font-weight:800;color:#059669;margin-bottom:6px;font-size:12px;text-transform:uppercase;letter-spacing:.4px;}
+.cost-split-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #d1fae5;}
+.cost-split-row:last-child{border-bottom:none;font-weight:700;color:var(--text);}
+.cost-split-row span:last-child{font-family:'JetBrains Mono',monospace;font-weight:700;color:#059669;}
+.cost-split-row.total span:last-child{color:var(--accent);}
+.proj-ck-mode{display:flex;gap:6px;margin-bottom:10px;}
+.ck-mode-btn{flex:1;padding:7px 10px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--surface2);font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;text-align:center;transition:all .15s;}
+.ck-mode-btn.active{background:#eff6ff;border-color:var(--accent);color:var(--accent);}
+.ck-phase{border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px;background:var(--surface2);}
+.ck-phase-title{font-size:11px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.phase-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.phase-dot.ck1{background:var(--accent);}
+.phase-dot.ck2{background:var(--green);}
 
 /* ===== STATS ===== */
 .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
@@ -409,7 +437,7 @@ textarea{resize:vertical;min-height:65px;}
       <!-- DASHBOARD -->
       <div id="page-dashboard" class="page active">
         <div class="filter-bar">
-          <svg class="filter-bar-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          <svg class="filter-bar-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
           <select id="dashPeriod" onchange="renderDash()">
             <option value="all">Tất cả</option>
             <option value="month" selected>Tháng này</option>
@@ -420,8 +448,8 @@ textarea{resize:vertical;min-height:65px;}
             <option value="lastyear">Năm ngoái</option>
           </select>
           <select id="dashSales" onchange="renderDash()"><option value="">👥 Tất cả Sales</option></select>
-          <span id="dashFilterLabel" class="filter-label"></span>
-          <button class="filter-reset" onclick="document.getElementById('dashPeriod').value='all';document.getElementById('dashSales').value='';renderDash()">↺ Reset</button>
+          <span id="dashFilterLabel"></span>
+          <button class="filter-reset" onclick="document.getElementById('dashPeriod').value='month';document.getElementById('dashSales').value='';renderDash()">↺ Reset</button>
         </div>
         <div class="stats-grid" id="statsGrid"></div>
         <div id="dashSalesBreak" style="display:none;margin-bottom:18px">
@@ -466,9 +494,19 @@ textarea{resize:vertical;min-height:65px;}
           </select>
         </div>
         <div class="card">
-          <div class="card-header"><div class="card-title">Danh sách khách hàng</div><span id="custCnt" style="font-size:12px;color:var(--text3)"></span></div>
+          <div class="card-header">
+            <div class="card-title">Danh sách khách hàng</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span id="custCnt" style="font-size:12px;color:var(--text3)"></span>
+            </div>
+          </div>
+          <div id="custBulkBar" class="bulk-bar">
+            <span class="bulk-cnt" id="custBulkCnt">0 đã chọn</span>
+            <button class="btn btn-danger btn-sm" onclick="bulkDelCust()">🗑 Xóa đã chọn</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearCustSel()">✕ Bỏ chọn</button>
+          </div>
           <div class="table-wrap"><table>
-            <thead><tr><th>#</th><th>Tên KH</th><th>SĐT</th><th>Nguồn</th><th>Dịch vụ</th><th>Sales</th><th>Trạng thái</th><th>VAT</th><th>Ngày</th><th>Ghi chú</th><th>Thao tác</th></tr></thead>
+            <thead><tr><th style="width:36px"><div class="cb-wrap"><input type="checkbox" id="custChkAll" onchange="toggleAllCust(this)"></div></th><th>#</th><th>Tên KH</th><th>SĐT</th><th>Nguồn</th><th>Dịch vụ</th><th>Sales</th><th>Trạng thái</th><th>VAT</th><th>Ngày</th><th>Ghi chú</th><th>Thao tác</th></tr></thead>
             <tbody id="custTb"></tbody>
           </table></div>
         </div>
@@ -482,8 +520,13 @@ textarea{resize:vertical;min-height:65px;}
         </div>
         <div id="tabProj">
           <div class="card"><div class="card-header"><div class="card-title">Quản lý dự án &amp; tài chính</div></div>
+            <div id="projBulkBar" class="bulk-bar">
+              <span class="bulk-cnt" id="projBulkCnt">0 đã chọn</span>
+              <button class="btn btn-danger btn-sm" onclick="bulkDelProj()">🗑 Xóa đã chọn</button>
+              <button class="btn btn-ghost btn-sm" onclick="clearProjSel()">✕ Bỏ chọn</button>
+            </div>
             <div class="table-wrap"><table>
-              <thead><tr><th>Dự án</th><th>Khách hàng</th><th>Sales</th><th>CK1</th><th>CK2</th><th>Tổng CK</th><th>Hosting</th><th>Domain</th><th>CP khác</th><th>Lợi nhuận</th><th>Ghi chú</th><th>Thao tác</th></tr></thead>
+              <thead><tr><th style="width:36px"><div class="cb-wrap"><input type="checkbox" id="projChkAll" onchange="toggleAllProj(this)"></div></th><th>Dự án</th><th>Khách hàng</th><th>Sales</th><th>CK1</th><th>CK2</th><th>Tổng CK</th><th>Hosting</th><th>Domain</th><th>CP khác</th><th>Lợi nhuận</th><th>Ghi chú</th><th>Thao tác</th></tr></thead>
               <tbody id="projTb"></tbody>
             </table></div>
           </div>
@@ -536,7 +579,7 @@ textarea{resize:vertical;min-height:65px;}
       <!-- DEBT -->
       <div id="page-debt" class="page">
         <div class="filter-bar">
-          <svg class="filter-bar-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          <svg class="filter-bar-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
           <select id="debtPeriod" onchange="renderDebt()">
             <option value="all" selected>Tất cả</option>
             <option value="month">Tháng này</option>
@@ -552,7 +595,7 @@ textarea{resize:vertical;min-height:65px;}
             <option value="debt">Còn nợ</option>
             <option value="paid">Đã TT</option>
           </select>
-          <span id="debtFilterLabel" class="filter-label"></span>
+          <span id="debtFilterLabel"></span>
           <button class="filter-reset" onclick="document.getElementById('debtPeriod').value='all';document.getElementById('debtSales').value='';document.getElementById('debtStatus').value='';renderDebt()">↺ Reset</button>
         </div>
         <div class="stats-grid" id="debtStats"></div>
@@ -765,6 +808,13 @@ textarea{resize:vertical;min-height:65px;}
   </div>
 </nav>
 
+<!-- UNDO BAR -->
+<div id="undoBar" class="undo-bar">
+  <span id="undoMsg">Đã xóa</span>
+  <button class="undo-btn" onclick="undoLast()">↩ Hoàn tác</button>
+  <button class="undo-close" onclick="dismissUndo()">×</button>
+</div>
+
 <!-- MODALS -->
 <div class="modal-overlay" id="mAddCust">
   <div class="modal">
@@ -792,22 +842,60 @@ textarea{resize:vertical;min-height:65px;}
 
 <div class="modal-overlay" id="mAddProj">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title">➕ Thêm dự án mới</div><button class="modal-close" onclick="closeM('mAddProj')">×</button></div>
-    <div class="modal-body"><div class="form-grid cols3">
-      <div class="form-group full"><label>Tên dự án *</label><input id="pName" placeholder="Website bán hàng Công ty ABC"></div>
-      <div class="form-group"><label>Khách hàng *</label><select id="pCust"><option value="">-- Chọn --</option></select></div>
-      <div class="form-group"><label>Phụ trách Sales</label><select id="pSales"><option value="">-- Chọn --</option></select></div>
-      <div class="form-group"><label>Tổng HĐ (₫)</label><div class="money-wrap"><input id="pTotal" type="text" inputmode="numeric" placeholder="0" oninput="fmtInput(this,'pTotalH')"></div><div class="money-hint" id="pTotalH"></div></div>
-      <div class="form-group"><label>CK lần 1 (₫)</label><div class="money-wrap"><input id="pCk1" type="text" inputmode="numeric" placeholder="0" oninput="fmtInput(this,'pCk1H')"></div><div class="money-hint" id="pCk1H"></div></div>
-      <div class="form-group"><label>CK lần 2 (₫)</label><div class="money-wrap"><input id="pCk2" type="text" inputmode="numeric" placeholder="0" oninput="fmtInput(this,'pCk2H')"></div><div class="money-hint" id="pCk2H"></div></div>
-      <div class="form-group"><label>Chi phí Hosting (₫)</label><div class="money-wrap"><input id="pHost" type="text" inputmode="numeric" placeholder="0" oninput="fmtInput(this,'pHostH')"></div><div class="money-hint" id="pHostH"></div></div>
-      <div class="form-group"><label>Chi phí Domain (₫)</label><div class="money-wrap"><input id="pDom" type="text" inputmode="numeric" placeholder="0" oninput="fmtInput(this,'pDomH')"></div><div class="money-hint" id="pDomH"></div></div>
-      <div class="form-group"><label>CP khác (₫)</label><div class="money-wrap"><input id="pOth" type="text" inputmode="numeric" placeholder="0" oninput="fmtInput(this,'pOthH')"></div><div class="money-hint" id="pOthH"></div></div>
-      <div class="form-group"><label>Ngày bắt đầu</label><input id="pStart" type="date"></div>
-      <div class="form-group"><label>Ngày bàn giao</label><input id="pEnd" type="date"></div>
-      <div class="form-group"><label>Trạng thái</label><select id="pSt"><option value="pending">Chờ xử lý</option><option value="inprogress">Đang triển khai</option><option value="done">Đã bàn giao</option><option value="warranty">Bảo hành</option></select></div>
-      <div class="form-group full"><label>Ghi chú</label><textarea id="pNote"></textarea></div>
-    </div></div>
+    <div class="modal-header"><div class="modal-title" id="projModalTitle">➕ Thêm dự án mới</div><button class="modal-close" onclick="closeM('mAddProj')">×</button></div>
+    <div class="modal-body">
+      <div class="form-grid cols3">
+        <div class="form-group full"><label>Tên dự án *</label><input id="pName" placeholder="Website bán hàng Công ty ABC"></div>
+        <div class="form-group"><label>Khách hàng *</label><select id="pCust"><option value="">-- Chọn --</option></select></div>
+        <div class="form-group"><label>Phụ trách Sales</label><select id="pSales"><option value="">-- Chọn --</option></select></div>
+        <div class="form-group"><label>Tổng HĐ (₫)</label><div class="money-wrap"><input id="pTotal" type="text" inputmode="numeric" placeholder="0" oninput="fmtInput(this,'pTotalH');calcProjSplit()"></div><div class="money-hint" id="pTotalH"></div></div>
+      </div>
+
+      <!-- CHI PHÍ CỐ ĐỊNH -->
+      <div style="margin:14px 0 10px;font-size:11px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">💰 Chi phí dự án (chia đôi theo từng đợt thanh toán)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
+        <div class="form-group"><label>Hosting (₫/năm)</label><div class="money-wrap"><input id="pHost" type="text" inputmode="numeric" placeholder="0" oninput="fmtInput(this,'pHostH');calcProjSplit()"></div><div class="money-hint" id="pHostH"></div></div>
+        <div class="form-group"><label>Domain (₫/năm)</label><div class="money-wrap"><input id="pDom" type="text" inputmode="numeric" placeholder="0" oninput="fmtInput(this,'pDomH');calcProjSplit()"></div><div class="money-hint" id="pDomH"></div></div>
+        <div class="form-group"><label>CP khác (₫)</label><div class="money-wrap"><input id="pOth" type="text" inputmode="numeric" placeholder="0" oninput="fmtInput(this,'pOthH');calcProjSplit()"></div><div class="money-hint" id="pOthH"></div></div>
+      </div>
+
+      <!-- MODE SELECTOR -->
+      <div style="font-size:11px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📋 Đợt thanh toán</div>
+      <div class="proj-ck-mode">
+        <div class="ck-mode-btn active" id="modeBtn1" onclick="setProjMode(1)">💳 Chỉ CK đợt 1</div>
+        <div class="ck-mode-btn" id="modeBtn2" onclick="setProjMode(2)">💳💳 CK 2 đợt</div>
+      </div>
+
+      <!-- CK 1 -->
+      <div class="ck-phase" id="ckPhase1">
+        <div class="ck-phase-title"><span class="phase-dot ck1"></span>Đợt 1</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="form-group"><label>CK lần 1 (₫)</label><div class="money-wrap"><input id="pCk1" type="text" inputmode="numeric" placeholder="0" oninput="fmtInput(this,'pCk1H');calcProjSplit()"></div><div class="money-hint" id="pCk1H"></div></div>
+          <div class="form-group"><label>Ngày bắt đầu</label><input id="pStart" type="date"></div>
+        </div>
+      </div>
+
+      <!-- CK 2 (ẩn khi mode 1) -->
+      <div class="ck-phase" id="ckPhase2" style="display:none">
+        <div class="ck-phase-title"><span class="phase-dot ck2"></span>Đợt 2</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="form-group"><label>CK lần 2 (₫)</label><div class="money-wrap"><input id="pCk2" type="text" inputmode="numeric" placeholder="0" oninput="fmtInput(this,'pCk2H');calcProjSplit()"></div><div class="money-hint" id="pCk2H"></div></div>
+          <div class="form-group"><label>Ngày bàn giao</label><input id="pEnd" type="date"></div>
+        </div>
+      </div>
+
+      <!-- LIVE SUMMARY -->
+      <div id="projSplitInfo" class="cost-split-info" style="display:none">
+        <div class="cost-split-title">📊 Tóm tắt lợi nhuận theo đợt</div>
+        <div id="projSplitRows"></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
+        <div class="form-group"><label>Trạng thái</label><select id="pSt"><option value="pending">Chờ xử lý</option><option value="inprogress">Đang triển khai</option><option value="done">Đã bàn giao</option><option value="warranty">Bảo hành</option></select></div>
+        <div class="form-group" id="pEndWrap" style="display:none"><label>Ngày bàn giao</label><input id="pEndSingle" type="date"></div>
+      </div>
+      <div class="form-group" style="margin-top:10px"><label>Ghi chú</label><textarea id="pNote"></textarea></div>
+    </div>
     <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('mAddProj')">Huỷ</button><button class="btn btn-primary" onclick="saveProj()">💾 Lưu dự án</button></div>
   </div>
 </div>
@@ -1139,6 +1227,11 @@ window.curPg=curPg;
 // ===== MODAL =====
 function openM(id){
   if(id==='mAddProj'||id==='mAddCust'){popSel('cSales');popSel('pCust');popSel('pSales');}
+  if(id==='mAddProj'&&!editPId){
+    document.getElementById('projModalTitle').textContent='➕ Thêm dự án mới';
+    setProjMode(1);
+    document.getElementById('projSplitInfo').style.display='none';
+  }
   document.getElementById(id).classList.add('open');
 }
 function closeM(id){document.getElementById(id).classList.remove('open');}
@@ -1183,23 +1276,38 @@ function updCust(){
   if(ns==='done'||ns==='lost'){C[idx].fd='';C[idx].ft='';}
   save();closeM('mEditCust');updBadge();render(curPg());
 }
-function delCust(id){if(!confirm('Xóa khách hàng?'))return;C=C.filter(x=>x.id!==id);save();updBadge();render(curPg());}
+function delCust(id){
+  if(!confirm('Xóa khách hàng này?'))return;
+  const prev=JSON.parse(JSON.stringify(C));
+  const name=C.find(x=>x.id===id)?.name||'';
+  C=C.filter(x=>x.id!==id);save();updBadge();render(curPg());
+  pushUndo('delCust',prev,`↩ Đã xóa "${name}"`);
+}
 
 // ===== PROJECTS =====
 function saveProj(){
   const name=document.getElementById('pName').value.trim();
   const cId=parseInt(document.getElementById('pCust').value);
   if(!name||!cId){alert('Nhập tên và chọn KH!');return;}
-  const np={id:editPId||Date.now(),name,cId,sId:parseInt(document.getElementById('pSales').value)||null,ck1:getF('pCk1'),ck2:getF('pCk2'),total:getF('pTotal'),host:getF('pHost'),dom:getF('pDom'),oth:getF('pOth'),note:document.getElementById('pNote').value.trim(),sd:document.getElementById('pStart').value,ed:document.getElementById('pEnd').value,st:document.getElementById('pSt').value};
+  const pEnd = _projMode===2 ? document.getElementById('pEnd').value : document.getElementById('pEndSingle').value;
+  const np={id:editPId||Date.now(),name,cId,sId:parseInt(document.getElementById('pSales').value)||null,
+    ck1:getF('pCk1'),ck2:_projMode===2?getF('pCk2'):0,total:getF('pTotal'),
+    host:getF('pHost'),dom:getF('pDom'),oth:getF('pOth'),
+    note:document.getElementById('pNote').value.trim(),
+    sd:document.getElementById('pStart').value,ed:pEnd,
+    st:document.getElementById('pSt').value};
   if(editPId){const i=P.findIndex(x=>x.id===editPId);P[i]=np;editPId=null;}else P.push(np);
   save();closeM('mAddProj');
-  ['pName','pCk1','pCk2','pTotal','pHost','pDom','pOth','pNote','pStart','pEnd'].forEach(i=>document.getElementById(i).value='');
+  ['pName','pCk1','pCk2','pTotal','pHost','pDom','pOth','pNote','pStart','pEnd','pEndSingle'].forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});
   ['pCk1H','pCk2H','pTotalH','pHostH','pDomH','pOthH'].forEach(i=>{const e=document.getElementById(i);if(e)e.textContent='';});
+  document.getElementById('projSplitInfo').style.display='none';
+  setProjMode(1);
   render('projects');
 }
 function editProj(id){
   const p=P.find(x=>x.id===id);if(!p)return;
   editPId=id;popSel('pCust');popSel('pSales');
+  document.getElementById('projModalTitle').textContent='✏️ Chỉnh sửa dự án';
   document.getElementById('pName').value=p.name;
   document.getElementById('pCust').value=p.cId;
   document.getElementById('pSales').value=p.sId||'';
@@ -1207,11 +1315,22 @@ function editProj(id){
   setF('pHost','pHostH',p.host);setF('pDom','pDomH',p.dom);setF('pOth','pOthH',p.oth);
   document.getElementById('pNote').value=p.note;
   document.getElementById('pStart').value=p.sd||'';
-  document.getElementById('pEnd').value=p.ed||'';
   document.getElementById('pSt').value=p.st;
+  // Detect mode: nếu có CK2 thì mode 2
+  const mode = (p.ck2 && p.ck2 > 0) ? 2 : 1;
+  setProjMode(mode);
+  if(mode===2) { document.getElementById('pEnd').value=p.ed||''; }
+  else { document.getElementById('pEndSingle').value=p.ed||''; }
+  calcProjSplit();
   document.getElementById('mAddProj').classList.add('open');
 }
-function delProj(id){if(!confirm('Xóa dự án?'))return;P=P.filter(x=>x.id!==id);save();render('projects');}
+function delProj(id){
+  if(!confirm('Xóa dự án này?'))return;
+  const prev=JSON.parse(JSON.stringify(P));
+  const name=P.find(x=>x.id===id)?.name||'';
+  P=P.filter(x=>x.id!==id);save();render('projects');
+  pushUndo('delProj',prev,`↩ Đã xóa dự án "${name}"`);
+}
 
 // ===== SALES =====
 function saveSales(){
@@ -1222,7 +1341,13 @@ function saveSales(){
   ['sName','sPhone','sEmail','sNote'].forEach(i=>document.getElementById(i).value='');
   renderSales();
 }
-function delSales(id){if(!confirm('Xóa sales?'))return;S=S.filter(x=>x.id!==id);save();renderSales();}
+function delSales(id){
+  if(!confirm('Xóa sales này?'))return;
+  const prev=JSON.parse(JSON.stringify(S));
+  const name=S.find(x=>x.id===id)?.name||'';
+  S=S.filter(x=>x.id!==id);save();renderSales();
+  pushUndo('delSales',prev,`↩ Đã xóa sales "${name}"`);
+}
 function editSales(id){
   const s=S.find(x=>x.id===id);if(!s)return;
   document.getElementById('esId').value=id;
@@ -1247,7 +1372,148 @@ function swTab(show,hide,el){
   if(show==='tabSum')renderProj();
 }
 
-// ===== BADGE =====
+// ===== UNDO SYSTEM =====
+let _undoStack = null, _undoTimer = null;
+function pushUndo(type, data, msg) {
+  _undoStack = {type, data};
+  clearTimeout(_undoTimer);
+  document.getElementById('undoMsg').textContent = msg;
+  document.getElementById('undoBar').classList.add('show');
+  _undoTimer = setTimeout(dismissUndo, 7000);
+}
+function dismissUndo() {
+  document.getElementById('undoBar').classList.remove('show');
+  _undoStack = null; clearTimeout(_undoTimer);
+}
+function undoLast() {
+  if (!_undoStack) return;
+  const {type, data} = _undoStack;
+  if (type === 'delCust') { C = data; save(); updBadge(); render(curPg()); }
+  else if (type === 'delProj') { P = data; save(); render('projects'); }
+  else if (type === 'delSales') { S = data; save(); renderSales(); }
+  dismissUndo();
+  toast('Hoàn tác thành công','Dữ liệu đã được khôi phục','info',4000);
+}
+
+// ===== CHECKBOX SELECT — CUSTOMERS =====
+let _custSel = new Set();
+function toggleAllCust(chk) {
+  const rows = document.querySelectorAll('.cust-chk');
+  rows.forEach(r => { r.checked = chk.checked; if(chk.checked) _custSel.add(parseInt(r.dataset.id)); else _custSel.delete(parseInt(r.dataset.id)); });
+  updCustBulkBar();
+}
+function toggleCustChk(id, chk) {
+  if(chk.checked) _custSel.add(id); else _custSel.delete(id);
+  const all = document.getElementById('custChkAll');
+  if(all) all.checked = _custSel.size > 0 && _custSel.size === document.querySelectorAll('.cust-chk').length;
+  updCustBulkBar();
+}
+function updCustBulkBar() {
+  const bar = document.getElementById('custBulkBar');
+  const cnt = document.getElementById('custBulkCnt');
+  if(_custSel.size > 0) { bar.classList.add('show'); cnt.textContent = `${_custSel.size} đã chọn`; }
+  else { bar.classList.remove('show'); }
+}
+function clearCustSel() {
+  _custSel.clear();
+  document.querySelectorAll('.cust-chk').forEach(r => r.checked = false);
+  const all = document.getElementById('custChkAll'); if(all) all.checked = false;
+  updCustBulkBar();
+}
+function bulkDelCust() {
+  if(!_custSel.size) return;
+  if(!confirm(`Xóa ${_custSel.size} khách hàng đã chọn?`)) return;
+  const prev = JSON.parse(JSON.stringify(C));
+  C = C.filter(x => !_custSel.has(x.id));
+  _custSel.clear(); save(); updBadge(); render(curPg());
+  pushUndo('delCust', prev, `↩ Đã xóa ${prev.length - C.length} khách hàng`);
+}
+
+// ===== CHECKBOX SELECT — PROJECTS =====
+let _projSel = new Set();
+function toggleAllProj(chk) {
+  const rows = document.querySelectorAll('.proj-chk');
+  rows.forEach(r => { r.checked = chk.checked; if(chk.checked) _projSel.add(parseInt(r.dataset.id)); else _projSel.delete(parseInt(r.dataset.id)); });
+  updProjBulkBar();
+}
+function toggleProjChk(id, chk) {
+  if(chk.checked) _projSel.add(id); else _projSel.delete(id);
+  const all = document.getElementById('projChkAll');
+  if(all) all.checked = _projSel.size > 0 && _projSel.size === document.querySelectorAll('.proj-chk').length;
+  updProjBulkBar();
+}
+function updProjBulkBar() {
+  const bar = document.getElementById('projBulkBar');
+  const cnt = document.getElementById('projBulkCnt');
+  if(_projSel.size > 0) { bar.classList.add('show'); cnt.textContent = `${_projSel.size} đã chọn`; }
+  else { bar.classList.remove('show'); }
+}
+function clearProjSel() {
+  _projSel.clear();
+  document.querySelectorAll('.proj-chk').forEach(r => r.checked = false);
+  const all = document.getElementById('projChkAll'); if(all) all.checked = false;
+  updProjBulkBar();
+}
+function bulkDelProj() {
+  if(!_projSel.size) return;
+  if(!confirm(`Xóa ${_projSel.size} dự án đã chọn?`)) return;
+  const prev = JSON.parse(JSON.stringify(P));
+  P = P.filter(x => !_projSel.has(x.id));
+  _projSel.clear(); save(); render('projects');
+  pushUndo('delProj', prev, `↩ Đã xóa ${prev.length - P.length} dự án`);
+}
+
+// ===== PROJECT MODE (1 đợt / 2 đợt) =====
+let _projMode = 1;
+function setProjMode(m) {
+  _projMode = m;
+  document.getElementById('modeBtn1').classList.toggle('active', m===1);
+  document.getElementById('modeBtn2').classList.toggle('active', m===2);
+  document.getElementById('ckPhase2').style.display = m===2 ? 'block' : 'none';
+  document.getElementById('pEndWrap').style.display = m===1 ? 'block' : 'none';
+  if(m===1){ document.getElementById('pCk2').value=''; document.getElementById('pCk2H').textContent=''; }
+  calcProjSplit();
+}
+function calcProjSplit() {
+  const ck1 = getF('pCk1'), ck2 = getF('pCk2');
+  const host = getF('pHost'), dom = getF('pDom'), oth = getF('pOth');
+  const totalCost = host + dom + oth;
+  const info = document.getElementById('projSplitInfo');
+  const rows = document.getElementById('projSplitRows');
+  if(!ck1 && !ck2) { info.style.display='none'; return; }
+  info.style.display = 'block';
+  let html = '';
+  if(_projMode === 1) {
+    // Chỉ CK1: chi phí tính đủ vào đợt này
+    const prf = ck1 - totalCost;
+    html += `<div class="cost-split-row"><span>💳 Đợt 1 nhận về</span><span>${fmtM(ck1)}</span></div>`;
+    if(totalCost) html += `<div class="cost-split-row"><span>🔻 Chi phí (hosting+domain+khác)</span><span style="color:var(--red)">−${fmtM(totalCost)}</span></div>`;
+    html += `<div class="cost-split-row total"><span>📈 Lợi nhuận đợt 1</span><span style="color:${prf>=0?'var(--green)':'var(--red)'};">${fmtM(prf)}</span></div>`;
+  } else {
+    // 2 đợt: chi phí chia đôi mỗi đợt
+    const half = Math.round(totalCost / 2);
+    const prf1 = ck1 - half;
+    const prf2 = ck2 - (totalCost - half);
+    const prfTot = (ck1+ck2) - totalCost;
+    if(ck1) {
+      html += `<div class="cost-split-row"><span>💳 Đợt 1 nhận về</span><span>${fmtM(ck1)}</span></div>`;
+      if(totalCost) html += `<div class="cost-split-row"><span>🔻 Chi phí đợt 1 (½)</span><span style="color:var(--red)">−${fmtM(half)}</span></div>`;
+      html += `<div class="cost-split-row"><span>📈 Lợi nhuận đợt 1</span><span style="color:${prf1>=0?'var(--green)':'var(--red)'};">${fmtM(prf1)}</span></div>`;
+    }
+    if(ck2) {
+      html += `<div style="height:6px"></div>`;
+      html += `<div class="cost-split-row"><span>💳 Đợt 2 nhận về</span><span>${fmtM(ck2)}</span></div>`;
+      if(totalCost) html += `<div class="cost-split-row"><span>🔻 Chi phí đợt 2 (½)</span><span style="color:var(--red)">−${fmtM(totalCost-half)}</span></div>`;
+      html += `<div class="cost-split-row"><span>📈 Lợi nhuận đợt 2</span><span style="color:${prf2>=0?'var(--green)':'var(--red)'};">${fmtM(prf2)}</span></div>`;
+    }
+    if(ck1 && ck2) {
+      html += `<div style="height:6px;border-top:1.5px dashed #bbf7d0;margin:4px 0"></div>`;
+      html += `<div class="cost-split-row total"><span>🏆 Tổng lợi nhuận 2 đợt</span><span style="color:${prfTot>=0?'var(--accent)':'var(--red)'};">${fmtM(prfTot)}</span></div>`;
+    }
+  }
+  rows.innerHTML = html;
+}
+window.calcProjSplit = calcProjSplit;
 function updBadge(){
   const t=td();
   const n=C.filter(c=>{if(c.status==='done'||c.status==='lost')return false;if(c.fd&&c.fd<=t)return true;if(c.status==='followup'&&!c.fd)return true;return false;}).length;
@@ -1341,7 +1607,7 @@ function renderDash(){
   const salesName=sIdF?(S.find(x=>x.id===sIdF)?.name||''):'';
   const filterDesc=[lbl,salesName].filter(Boolean).join(' · ');
   const filterEl=document.getElementById('dashFilterLabel');
-  if(filterEl)filterEl.textContent=filterDesc&&filterDesc!=='Tất cả'?'📌 '+filterDesc:'';
+  if(filterEl)filterEl.innerHTML=filterDesc&&filterDesc!=='Tất cả'?`<span class="filter-active-tag">📌 ${filterDesc}</span>`:'';
   const rev=fp.reduce((s,p)=>s+(p.ck1||0)+(p.ck2||0),0);
   const prf=fp.reduce((s,p)=>s+profit(p),0);
   const dbt=fp.reduce((s,p)=>s+Math.max(0,(p.total||0)-((p.ck1||0)+(p.ck2||0))),0);
@@ -1410,15 +1676,20 @@ function renderCust(){
   if(sc)list=list.filter(c=>c.source===sc);
   document.getElementById('custCnt').textContent=`${list.length} khách hàng`;
   document.getElementById('custTb').innerHTML=list.length?list.map((c,i)=>`<tr>
+    <td><div class="cb-wrap"><input type="checkbox" class="cust-chk" data-id="${c.id}" ${_custSel.has(c.id)?'checked':''} onchange="toggleCustChk(${c.id},this)"></div></td>
     <td style="color:var(--text3)">${i+1}</td>
     <td><strong>${c.name}</strong></td>
-    <td class="mono">${c.phone}</td>
+    <td class="mono">${c.phone||'—'}</td>
     <td><span class="tag">${SRC[c.source]||c.source}</span></td>
     <td>${c.service||'—'}</td>
     <td style="font-size:12px">${sName(c.sId)}</td>
     <td><span class="badge ${SB[c.status]||'badge-new'}">${SL[c.status]||c.status}</span></td>
     <td>${c.vat==='yes'?'<span class="badge badge-contract">VAT</span>':'—'}</td>
     <td style="color:var(--text3);font-size:12px">${c.ca||'—'}</td>
+    <td style="max-width:130px;font-size:12px;color:var(--text2)">${c.note||'—'}</td>
+    <td><div class="inline-actions"><button class="btn btn-ghost btn-sm" onclick="editCust(${c.id})">✏️</button><button class="btn btn-danger btn-sm" onclick="delCust(${c.id})">🗑</button></div></td>
+  </tr>`).join(''):'<tr><td colspan="12" style="text-align:center;padding:32px;color:var(--text3)">Không có khách hàng</td></tr>';
+}
     <td style="max-width:130px;font-size:12px;color:var(--text2)">${c.note||'—'}</td>
     <td><div class="inline-actions"><button class="btn btn-ghost btn-sm" onclick="editCust(${c.id})">✏️</button><button class="btn btn-danger btn-sm" onclick="delCust(${c.id})">🗑</button></div></td>
   </tr>`).join(''):'<tr><td colspan="11" style="text-align:center;padding:32px;color:var(--text3)">Không có khách hàng</td></tr>';
@@ -1429,15 +1700,16 @@ function renderProj(){
   document.getElementById('projTb').innerHTML=P.length?P.map(p=>{
     const c=C.find(x=>x.id===p.cId);const pf=profit(p);const rv=(p.ck1||0)+(p.ck2||0);
     return`<tr>
+      <td><div class="cb-wrap"><input type="checkbox" class="proj-chk" data-id="${p.id}" ${_projSel.has(p.id)?'checked':''} onchange="toggleProjChk(${p.id},this)"></div></td>
       <td><strong>${p.name}</strong><div style="font-size:11px;color:var(--text3);margin-top:1px">${PST[p.st]||p.st}</div></td>
       <td>${c?c.name:'—'}</td><td style="font-size:12px">${sName(p.sId)}</td>
-      <td class="mono">${fmtM(p.ck1)}</td><td class="mono">${fmtM(p.ck2)}</td>
+      <td class="mono">${fmtM(p.ck1)}</td><td class="mono">${p.ck2?fmtM(p.ck2):'—'}</td>
       <td class="mono" style="color:var(--accent)">${fmtM(rv)}</td>
       <td class="mono" style="color:var(--red)">-${fmtM(p.host)}</td><td class="mono" style="color:var(--red)">-${fmtM(p.dom)}</td><td class="mono" style="color:var(--red)">-${fmtM(p.oth)}</td>
       <td><div class="loin ${pf>=0?'pos':'neg'}">${fmtM(pf)}</div><div class="profit-bar"><div class="profit-fill" style="width:${p.total?Math.min(100,rv/p.total*100):0}%;background:${pf>=0?'var(--green)':'var(--red)'}"></div></div></td>
       <td style="font-size:12px;color:var(--text2);max-width:110px">${p.note||'—'}</td>
       <td><div class="inline-actions"><button class="btn btn-ghost btn-sm" onclick="editProj(${p.id})">✏️</button><button class="btn btn-danger btn-sm" onclick="delProj(${p.id})">🗑</button></div></td>
-    </tr>`;}).join(''):'<tr><td colspan="12" style="text-align:center;padding:32px;color:var(--text3)">Chưa có dự án</td></tr>';
+    </tr>`;}).join(''):'<tr><td colspan="13" style="text-align:center;padding:32px;color:var(--text3)">Chưa có dự án</td></tr>';
   const rv=P.reduce((s,p)=>s+(p.ck1||0)+(p.ck2||0),0);
   const cp=P.reduce((s,p)=>s+(p.host||0)+(p.dom||0)+(p.oth||0),0);
   const tc=P.reduce((s,p)=>s+(p.total||0),0);
@@ -1540,7 +1812,7 @@ function renderDebt(){
   const salesName=sIdF?(S.find(x=>x.id===sIdF)?.name||''):'';
   const filterDesc=[lbl,salesName].filter(Boolean).join(' · ');
   const filterEl=document.getElementById('debtFilterLabel');
-  if(filterEl)filterEl.textContent=filterDesc&&filterDesc!=='Tất cả'?'📌 '+filterDesc:'';
+  if(filterEl)filterEl.innerHTML=filterDesc&&filterDesc!=='Tất cả'?`<span class="filter-active-tag">📌 ${filterDesc}</span>`:'';
   const tdbt=dp.reduce((s,p)=>s+p.db,0),trv=dp.reduce((s,p)=>s+p.rv,0),ttc=dp.reduce((s,p)=>s+(p.total||0),0);
   const paidPct=ttc?Math.round(trv/ttc*100):0;
   document.getElementById('debtStats').innerHTML=`
