@@ -1478,32 +1478,57 @@ function calcProjSplit() {
   const ck1 = getF('pCk1'), ck2 = getF('pCk2');
   const host = getF('pHost'), dom = getF('pDom'), oth = getF('pOth');
   const totalCost = host + dom + oth;
+  // Chi phí luôn chia đôi cho mỗi đợt (dù 1 hay 2 đợt)
+  const halfHost = Math.round(host / 2);
+  const halfDom  = Math.round(dom  / 2);
+  const halfOth  = Math.round(oth  / 2);
+  const half = halfHost + halfDom + halfOth;           // chi phí 1 đợt
+  const half2 = totalCost - half;                      // đợt còn lại (làm tròn lẻ)
   const info = document.getElementById('projSplitInfo');
   const rows = document.getElementById('projSplitRows');
   if(!ck1 && !ck2) { info.style.display='none'; return; }
   info.style.display = 'block';
+
+  // Helper: render chi tiết chi phí đợt
+  function costDetail(h, d, o) {
+    if(!h && !d && !o) return '';
+    let s = '';
+    if(h) s += `<div class="cost-split-row" style="font-size:11px;color:var(--text3)"><span style="padding-left:14px">🖥 Hosting (½)</span><span style="color:var(--red)">−${fmtM(h)}</span></div>`;
+    if(d) s += `<div class="cost-split-row" style="font-size:11px;color:var(--text3)"><span style="padding-left:14px">🌐 Domain (½)</span><span style="color:var(--red)">−${fmtM(d)}</span></div>`;
+    if(o) s += `<div class="cost-split-row" style="font-size:11px;color:var(--text3)"><span style="padding-left:14px">📦 CP khác (½)</span><span style="color:var(--red)">−${fmtM(o)}</span></div>`;
+    return s;
+  }
+
   let html = '';
   if(_projMode === 1) {
-    // Chỉ CK1: chi phí tính đủ vào đợt này
-    const prf = ck1 - totalCost;
+    // Mode 1 đợt: chi phí chia đôi (½ tính vào đợt này)
+    const prf = ck1 - half;
     html += `<div class="cost-split-row"><span>💳 Đợt 1 nhận về</span><span>${fmtM(ck1)}</span></div>`;
-    if(totalCost) html += `<div class="cost-split-row"><span>🔻 Chi phí (hosting+domain+khác)</span><span style="color:var(--red)">−${fmtM(totalCost)}</span></div>`;
+    if(half) {
+      html += `<div class="cost-split-row"><span>🔻 Chi phí đợt 1 (½ tổng)</span><span style="color:var(--red)">−${fmtM(half)}</span></div>`;
+      html += costDetail(halfHost, halfDom, halfOth);
+    }
     html += `<div class="cost-split-row total"><span>📈 Lợi nhuận đợt 1</span><span style="color:${prf>=0?'var(--green)':'var(--red)'};">${fmtM(prf)}</span></div>`;
   } else {
-    // 2 đợt: chi phí chia đôi mỗi đợt
-    const half = Math.round(totalCost / 2);
+    // Mode 2 đợt: mỗi đợt chia đôi chi phí
     const prf1 = ck1 - half;
-    const prf2 = ck2 - (totalCost - half);
-    const prfTot = (ck1+ck2) - totalCost;
+    const prf2 = ck2 - half2;
+    const prfTot = (ck1 + ck2) - totalCost;
     if(ck1) {
       html += `<div class="cost-split-row"><span>💳 Đợt 1 nhận về</span><span>${fmtM(ck1)}</span></div>`;
-      if(totalCost) html += `<div class="cost-split-row"><span>🔻 Chi phí đợt 1 (½)</span><span style="color:var(--red)">−${fmtM(half)}</span></div>`;
+      if(half) {
+        html += `<div class="cost-split-row"><span>🔻 Chi phí đợt 1 (½)</span><span style="color:var(--red)">−${fmtM(half)}</span></div>`;
+        html += costDetail(halfHost, halfDom, halfOth);
+      }
       html += `<div class="cost-split-row"><span>📈 Lợi nhuận đợt 1</span><span style="color:${prf1>=0?'var(--green)':'var(--red)'};">${fmtM(prf1)}</span></div>`;
     }
     if(ck2) {
       html += `<div style="height:6px"></div>`;
       html += `<div class="cost-split-row"><span>💳 Đợt 2 nhận về</span><span>${fmtM(ck2)}</span></div>`;
-      if(totalCost) html += `<div class="cost-split-row"><span>🔻 Chi phí đợt 2 (½)</span><span style="color:var(--red)">−${fmtM(totalCost-half)}</span></div>`;
+      if(half2) {
+        html += `<div class="cost-split-row"><span>🔻 Chi phí đợt 2 (½)</span><span style="color:var(--red)">−${fmtM(half2)}</span></div>`;
+        html += costDetail(host-halfHost, dom-halfDom, oth-halfOth);
+      }
       html += `<div class="cost-split-row"><span>📈 Lợi nhuận đợt 2</span><span style="color:${prf2>=0?'var(--green)':'var(--red)'};">${fmtM(prf2)}</span></div>`;
     }
     if(ck1 && ck2) {
