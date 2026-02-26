@@ -309,7 +309,7 @@ textarea{resize:vertical;min-height:65px;}
 <body>
 
 <!-- LOGIN SCREEN -->
-<div id="loginScreen">
+<div id="loginScreen" style="display:none">
   <div class="login-box">
     <div class="login-logo">Agency<span>CRM</span></div>
     <div class="login-sub">Hệ thống quản lý khách hàng & dự án</div>
@@ -338,7 +338,7 @@ textarea{resize:vertical;min-height:65px;}
 
 <div id="toastCont"></div>
 
-<div class="app" id="appRoot" style="display:none">
+<div class="app" id="appRoot">
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo">
       Agency<span>CRM</span>
@@ -1078,8 +1078,6 @@ function doLogout() {
 }
 
 function showApp() {
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('appRoot').style.display = 'flex';
   if(window.innerWidth <= 768) {
     document.getElementById('mobileNav').style.display = 'block';
     const dg = document.querySelector('.dash-grid');
@@ -1088,7 +1086,7 @@ function showApp() {
     if(fg) fg.style.gridTemplateColumns = '1fr';
   }
   initData();
-  window._crmReady = true;  // set TRƯỚC khi attach listener để render được ngay
+  window._crmReady = true;
   if(window._fbSetupListeners) window._fbSetupListeners();
 }
 
@@ -1096,11 +1094,8 @@ function showApp() {
 document.getElementById('lgPass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 document.getElementById('lgUser').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('lgPass').focus(); });
 
-// Auto-login if session exists
-if(sessionStorage.getItem('crm_auth') === '1') {
-  document.getElementById('loginScreen').style.display = 'none';
-  showApp();
-}
+// Auto-start app (login đã tắt)
+showApp();
 
 // ===== MOBILE SIDEBAR =====
 function openSidebar() {
