@@ -436,9 +436,9 @@ textarea{resize:vertical;min-height:65px;}
     <div class="content">
       <!-- DASHBOARD -->
       <div id="page-dashboard" class="page active">
-        <div class="filter-bar">
-          <svg class="filter-bar-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-          <select id="dashPeriod" onchange="renderDash()">
+        <div class="filter-bar" style="flex-wrap:nowrap;align-items:center;">
+          <svg class="filter-bar-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          <select id="dashPeriod" onchange="renderDash()" style="min-width:120px">
             <option value="all">Tất cả</option>
             <option value="month" selected>Tháng này</option>
             <option value="lastmonth">Tháng trước</option>
@@ -447,9 +447,9 @@ textarea{resize:vertical;min-height:65px;}
             <option value="year">Năm nay</option>
             <option value="lastyear">Năm ngoái</option>
           </select>
-          <select id="dashSales" onchange="renderDash()"><option value="">👥 Tất cả Sales</option></select>
+          <select id="dashSales" onchange="renderDash()" style="min-width:140px"><option value="">👥 Tất cả Sales</option></select>
           <span id="dashFilterLabel"></span>
-          <button class="filter-reset" onclick="document.getElementById('dashPeriod').value='month';document.getElementById('dashSales').value='';renderDash()">↺ Reset</button>
+          <button class="filter-reset" style="margin-left:auto;white-space:nowrap" onclick="document.getElementById('dashPeriod').value='month';document.getElementById('dashSales').value='';renderDash()">↺ Reset</button>
         </div>
         <div class="stats-grid" id="statsGrid"></div>
         <div id="dashSalesBreak" style="display:none;margin-bottom:18px">
