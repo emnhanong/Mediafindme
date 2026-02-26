@@ -771,7 +771,7 @@ textarea{resize:vertical;min-height:65px;}
     <div class="modal-header"><div class="modal-title">➕ Thêm khách hàng mới</div><button class="modal-close" onclick="closeM('mAddCust')">×</button></div>
     <div class="modal-body"><div class="form-grid">
       <div class="form-group"><label>Tên khách hàng *</label><input id="cName" placeholder="Nguyễn Văn A"></div>
-      <div class="form-group"><label>SĐT / Zalo *</label><input id="cPhone" placeholder="0912 345 678"></div>
+      <div class="form-group"><label>SĐT / Zalo</label><input id="cPhone" placeholder="0912 345 678"></div>
       <div class="form-group"><label>Email</label><input id="cEmail" type="email" placeholder="example@gmail.com"></div>
       <div class="form-group"><label>Dịch vụ quan tâm</label><input id="cService" placeholder="Website bán hàng..."></div>
       <div class="form-group"><label>Phụ trách Sales</label><select id="cSales"><option value="">-- Chọn --</option></select></div>
@@ -1131,7 +1131,7 @@ function popSel(id){
 // ===== CUSTOMERS =====
 function saveCust(){
   const name=document.getElementById('cName').value.trim(),phone=document.getElementById('cPhone').value.trim();
-  if(!name||!phone){alert('Nhập tên và SĐT!');return;}
+  if(!name){alert('Vui lòng nhập tên khách hàng!');return;}
   C.push({id:Date.now(),name,phone,email:document.getElementById('cEmail').value.trim(),service:document.getElementById('cService').value.trim(),sId:parseInt(document.getElementById('cSales').value)||null,source:document.getElementById('cSource').value,status:document.getElementById('cStatus').value,vat:document.getElementById('cVat').value,fd:document.getElementById('cFDate').value,ft:document.getElementById('cFTime').value,note:document.getElementById('cNote').value.trim(),ca:td()});
   save();closeM('mAddCust');
   ['cName','cPhone','cEmail','cService','cNote','cFDate','cFTime'].forEach(i=>document.getElementById(i).value='');
