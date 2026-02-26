@@ -897,23 +897,35 @@ function attachListener(db) {
   _unsubscribe = onSnapshot(
     doc(db, 'crm', 'data'),
     (snap) => {
-      if(snap.exists()) {
-        const d = snap.data();
-        if(d.C) window.C = d.C;
-        if(d.P) window.P = d.P;
-        if(d.S) window.S = d.S;
-        localStorage.setItem('crm_c', JSON.stringify(window.C));
-        localStorage.setItem('crm_p', JSON.stringify(window.P));
-        localStorage.setItem('crm_s', JSON.stringify(window.S));
-        if(window._crmReady) {
-          window.updBadge();
-          window.render(window.curPg());
-          showSync('ok', '✓ Đã đồng bộ');
-        }
-        const bar = document.getElementById('fbStatusBar');
-        const txt = document.getElementById('fbStatusTxt');
-        if(bar){ bar.className='fb-status-bar connected'; txt.textContent='✅ Firebase đã kết nối – Dữ liệu đồng bộ realtime'; }
+      if(!snap.exists()) return;
+      const d = snap.data();
+      // Chỉ update nếu có dữ liệu hợp lệ từ cloud
+      if(Array.isArray(d.C) && d.C.length >= 0) {
+        window.C = d.C;
+        // Sync lại biến local để các hàm saveCust/saveProj dùng đúng
+        if(typeof C !== 'undefined') { C.length = 0; d.C.forEach(x => C.push(x)); }
       }
+      if(Array.isArray(d.P) && d.P.length >= 0) {
+        window.P = d.P;
+        if(typeof P !== 'undefined') { P.length = 0; d.P.forEach(x => P.push(x)); }
+      }
+      if(Array.isArray(d.S) && d.S.length >= 0) {
+        window.S = d.S;
+        if(typeof S !== 'undefined') { S.length = 0; d.S.forEach(x => S.push(x)); }
+      }
+      // Cache vào localStorage
+      localStorage.setItem('crm_c', JSON.stringify(window.C));
+      localStorage.setItem('crm_p', JSON.stringify(window.P));
+      localStorage.setItem('crm_s', JSON.stringify(window.S));
+      // Re-render nếu app đang mở
+      if(window._crmReady) {
+        window.updBadge();
+        window.render(window.curPg());
+        showSync('ok', '✓ Đã đồng bộ');
+      }
+      const bar = document.getElementById('fbStatusBar');
+      const txt = document.getElementById('fbStatusTxt');
+      if(bar){ bar.className='fb-status-bar connected'; txt.textContent='✅ Firebase đã kết nối – Dữ liệu đồng bộ realtime'; }
     },
     (err) => {
       console.warn('[Firebase] Listener error:', err.code, err.message);
@@ -1068,15 +1080,14 @@ function showApp() {
   document.getElementById('appRoot').style.display = 'flex';
   if(window.innerWidth <= 768) {
     document.getElementById('mobileNav').style.display = 'block';
-    // make dash-grid single column on mobile
     const dg = document.querySelector('.dash-grid');
     if(dg) dg.style.gridTemplateColumns = '1fr';
     const fg = document.querySelector('.fu-grid');
     if(fg) fg.style.gridTemplateColumns = '1fr';
   }
   initData();
+  window._crmReady = true;  // set TRƯỚC khi attach listener để render được ngay
   if(window._fbSetupListeners) window._fbSetupListeners();
-  window._crmReady = true;
 }
 
 // Enter key on login
@@ -1103,13 +1114,19 @@ function closeSidebar() {
 let C = [], P = [], S = [];
 
 function initData() {
+  // Load from localStorage (fastest, always available)
   C = JSON.parse(localStorage.getItem('crm_c')||'[]');
   P = JSON.parse(localStorage.getItem('crm_p')||'[]');
   S = JSON.parse(localStorage.getItem('crm_s')||'[]');
   window.C = C; window.P = P; window.S = S;
-  // Seed data if empty
-  if(!C.length) {
-    S=[{id:1,name:'Minh Tuấn',phone:'0901000001',email:'',note:'Lead Sales'},{id:2,name:'Thu Hương',phone:'0901000002',email:'',note:''},{id:3,name:'Quốc Anh',phone:'0901000003',email:'',note:''}];
+
+  // Seed demo data nếu chưa có gì
+  if(!C.length && !P.length) {
+    S=[
+      {id:1,name:'Minh Tuấn',phone:'0901000001',email:'',note:'Lead Sales'},
+      {id:2,name:'Thu Hương',phone:'0901000002',email:'',note:''},
+      {id:3,name:'Quốc Anh',phone:'0901000003',email:'',note:''}
+    ];
     C=[
       {id:1,name:'Nguyễn Thị Lan',phone:'0901234567',email:'lan@gmail.com',service:'Website bán hàng',source:'facebook',sId:1,status:'done',vat:'no',fd:'',ft:'',note:'Bàn giao web thời trang',ca:'2025-01-10'},
       {id:2,name:'Trần Minh Quân',phone:'0912345678',email:'',service:'Landing page',source:'personal',sId:1,status:'dev',vat:'yes',fd:'',ft:'',note:'Cần xuất hóa đơn VAT',ca:'2025-02-01'},
@@ -1123,7 +1140,7 @@ function initData() {
       {id:2,name:'Landing page ABC',cId:2,sId:1,ck1:3000000,ck2:0,total:6000000,host:400000,dom:200000,oth:0,note:'Đang dev, đợt 2 chưa CK',sd:'2025-02-05',ed:'',st:'inprogress'},
       {id:3,name:'Website công ty Minh Quân',cId:2,sId:2,ck1:4000000,ck2:4000000,total:8000000,host:600000,dom:300000,oth:500000,note:'',sd:'2024-12-01',ed:'2025-01-20',st:'warranty'},
     ];
-    window.C=C;window.P=P;window.S=S;
+    window.C=C; window.P=P; window.S=S;
     save();
   }
   updBadge();
@@ -1133,9 +1150,11 @@ function initData() {
 }
 
 function save() {
-  localStorage.setItem('crm_c',JSON.stringify(C));
-  localStorage.setItem('crm_p',JSON.stringify(P));
-  localStorage.setItem('crm_s',JSON.stringify(S));
+  // Always keep window refs in sync
+  window.C = C; window.P = P; window.S = S;
+  localStorage.setItem('crm_c', JSON.stringify(C));
+  localStorage.setItem('crm_p', JSON.stringify(P));
+  localStorage.setItem('crm_s', JSON.stringify(S));
   // Sync to Firebase
   if(window._fbSave) window._fbSave(C, P, S);
 }
@@ -1213,6 +1232,7 @@ function popSel(id){
 function saveCust(){
   const name=document.getElementById('cName').value.trim(),phone=document.getElementById('cPhone').value.trim();
   if(!name||!phone){alert('Nhập tên và SĐT!');return;}
+  C=window.C; // luôn dùng array mới nhất
   C.push({id:Date.now(),name,phone,email:document.getElementById('cEmail').value.trim(),service:document.getElementById('cService').value.trim(),sId:parseInt(document.getElementById('cSales').value)||null,source:document.getElementById('cSource').value,status:document.getElementById('cStatus').value,vat:document.getElementById('cVat').value,fd:document.getElementById('cFDate').value,ft:document.getElementById('cFTime').value,note:document.getElementById('cNote').value.trim(),ca:td()});
   save();closeM('mAddCust');
   ['cName','cPhone','cEmail','cService','cNote','cFDate','cFTime'].forEach(i=>document.getElementById(i).value='');
@@ -1236,6 +1256,7 @@ function editCust(id){
   document.getElementById('mEditCust').classList.add('open');
 }
 function updCust(){
+  C=window.C; // sync
   const id=parseInt(document.getElementById('ecId').value);
   const idx=C.findIndex(x=>x.id===id);if(idx===-1)return;
   const ns=document.getElementById('ecSt').value;
@@ -1243,13 +1264,14 @@ function updCust(){
   if(ns==='done'||ns==='lost'){C[idx].fd='';C[idx].ft='';}
   save();closeM('mEditCust');updBadge();render(curPg());
 }
-function delCust(id){if(!confirm('Xóa khách hàng?'))return;C=C.filter(x=>x.id!==id);save();updBadge();render(curPg());}
+function delCust(id){if(!confirm('Xóa khách hàng?'))return;C=window.C.filter(x=>x.id!==id);window.C=C;save();updBadge();render(curPg());}
 
 // ===== PROJECTS =====
 function saveProj(){
   const name=document.getElementById('pName').value.trim();
   const cId=parseInt(document.getElementById('pCust').value);
   if(!name||!cId){alert('Nhập tên và chọn KH!');return;}
+  P=window.P; // luôn dùng array mới nhất
   const np={id:editPId||Date.now(),name,cId,sId:parseInt(document.getElementById('pSales').value)||null,ck1:getF('pCk1'),ck2:getF('pCk2'),total:getF('pTotal'),host:getF('pHost'),dom:getF('pDom'),oth:getF('pOth'),note:document.getElementById('pNote').value.trim(),sd:document.getElementById('pStart').value,ed:document.getElementById('pEnd').value,st:document.getElementById('pSt').value};
   if(editPId){const i=P.findIndex(x=>x.id===editPId);P[i]=np;editPId=null;}else P.push(np);
   save();closeM('mAddProj');
@@ -1271,18 +1293,19 @@ function editProj(id){
   document.getElementById('pSt').value=p.st;
   document.getElementById('mAddProj').classList.add('open');
 }
-function delProj(id){if(!confirm('Xóa dự án?'))return;P=P.filter(x=>x.id!==id);save();render('projects');}
+function delProj(id){if(!confirm('Xóa dự án?'))return;P=window.P.filter(x=>x.id!==id);window.P=P;save();render('projects');}
 
 // ===== SALES =====
 function saveSales(){
   const name=document.getElementById('sName').value.trim();
   if(!name){alert('Nhập tên!');return;}
+  S=window.S;
   S.push({id:Date.now(),name,phone:document.getElementById('sPhone').value.trim(),email:document.getElementById('sEmail').value.trim(),note:document.getElementById('sNote').value.trim()});
   save();closeM('mAddSales');
   ['sName','sPhone','sEmail','sNote'].forEach(i=>document.getElementById(i).value='');
   renderSales();
 }
-function delSales(id){if(!confirm('Xóa sales?'))return;S=S.filter(x=>x.id!==id);save();renderSales();}
+function delSales(id){if(!confirm('Xóa sales?'))return;S=window.S.filter(x=>x.id!==id);window.S=S;save();renderSales();}
 function editSales(id){
   const s=S.find(x=>x.id===id);if(!s)return;
   document.getElementById('esId').value=id;
@@ -1293,6 +1316,7 @@ function editSales(id){
   document.getElementById('mEditSales').classList.add('open');
 }
 function updSales(){
+  S=window.S;
   const id=parseInt(document.getElementById('esId').value);
   const idx=S.findIndex(x=>x.id===id);if(idx===-1)return;
   const name=document.getElementById('esName').value.trim();
@@ -1523,8 +1547,8 @@ function renderFU(){
     <td><div class="inline-actions"><button class="btn btn-ghost btn-sm" onclick="editCust(${c.id})">✏️</button><button class="btn btn-success btn-sm" onclick="markDone(${c.id})">✅ Chốt</button><button class="btn btn-danger btn-sm" onclick="markLost(${c.id})">❌</button></div></td>
   </tr>`).join(''):'<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text3)">Không có lịch</td></tr>';
 }
-function markDone(id){const i=C.findIndex(x=>x.id===id);if(i===-1)return;if(!confirm(`Đánh dấu "${C[i].name}" đã chốt?`))return;C[i].status='done';C[i].fd='';C[i].ft='';save();updBadge();renderFU();}
-function markLost(id){const i=C.findIndex(x=>x.id===id);if(i===-1)return;if(!confirm(`Đánh dấu "${C[i].name}" không chốt được?`))return;C[i].status='lost';C[i].fd='';C[i].ft='';save();updBadge();renderFU();}
+function markDone(id){C=window.C;const i=C.findIndex(x=>x.id===id);if(i===-1)return;if(!confirm(`Đánh dấu "${C[i].name}" đã chốt?`))return;C[i].status='done';C[i].fd='';C[i].ft='';save();updBadge();renderFU();}
+function markLost(id){C=window.C;const i=C.findIndex(x=>x.id===id);if(i===-1)return;if(!confirm(`Đánh dấu "${C[i].name}" không chốt được?`))return;C[i].status='lost';C[i].fd='';C[i].ft='';save();updBadge();renderFU();}
 
 // ===== SALES PAGE =====
 function renderSales(){
