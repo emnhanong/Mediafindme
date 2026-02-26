@@ -1508,66 +1508,61 @@ function calcProjSplit() {
   if(!ck1 && !ck2 && !ck3) { info.style.display='none'; return; }
   info.style.display = 'block';
 
-  // Chia chi phí đều theo số đợt
-  const parts = _projMode; // 1, 2, hoặc 3
-  const costPerPart = Math.round(totalCost / parts);
+  const n = _projMode; // số đợt: 1, 2, 3
 
-  // Helper: render chi tiết chi phí mỗi đợt
-  function costDetail(h, d, o) {
+  // Chia đều từng khoản chi phí, đợt cuối lấy phần còn lại (tránh sai lệch làm tròn)
+  function splitCost(total, numParts) {
+    const per = Math.round(total / numParts);
+    const parts = [];
+    for(let i = 0; i < numParts - 1; i++) parts.push(per);
+    parts.push(total - per * (numParts - 1)); // đợt cuối = tổng - các đợt trước
+    return parts;
+  }
+  const hS = splitCost(host, n);
+  const dS = splitCost(dom,  n);
+  const oS = splitCost(oth,  n);
+
+  // Chi phí mỗi đợt = hosting[i] + domain[i] + cp_khac[i]
+  const costByPhase = hS.map((h, i) => h + dS[i] + oS[i]);
+
+  function costDetail(i) {
     let s = '';
-    if(h) s += `<div class="cost-split-row" style="font-size:11px;color:var(--text3)"><span style="padding-left:14px">🖥 Hosting (÷${parts})</span><span style="color:var(--red)">−${fmtM(h)}</span></div>`;
-    if(d) s += `<div class="cost-split-row" style="font-size:11px;color:var(--text3)"><span style="padding-left:14px">🌐 Domain (÷${parts})</span><span style="color:var(--red)">−${fmtM(d)}</span></div>`;
-    if(o) s += `<div class="cost-split-row" style="font-size:11px;color:var(--text3)"><span style="padding-left:14px">📦 CP khác (÷${parts})</span><span style="color:var(--red)">−${fmtM(o)}</span></div>`;
+    if(hS[i]) s += `<div class="cost-split-row" style="font-size:11px;color:var(--text3)"><span style="padding-left:14px">🖥 Hosting (÷${n})</span><span style="color:var(--red)">−${fmtM(hS[i])}</span></div>`;
+    if(dS[i]) s += `<div class="cost-split-row" style="font-size:11px;color:var(--text3)"><span style="padding-left:14px">🌐 Domain (÷${n})</span><span style="color:var(--red)">−${fmtM(dS[i])}</span></div>`;
+    if(oS[i]) s += `<div class="cost-split-row" style="font-size:11px;color:var(--text3)"><span style="padding-left:14px">📦 CP khác (÷${n})</span><span style="color:var(--red)">−${fmtM(oS[i])}</span></div>`;
     return s;
   }
 
-  // Chi phí chia đều từng khoản cho mỗi đợt
-  const hPart = Math.round(host / parts);
-  const dPart = Math.round(dom  / parts);
-  const oPart = Math.round(oth  / parts);
-  // Đợt cuối nhận phần còn lại (xử lý làm tròn)
-  const hLast = host - hPart * (parts - 1);
-  const dLast = dom  - dPart * (parts - 1);
-  const oLast = oth  - oPart * (parts - 1);
-  const costLast = hLast + dLast + oLast;
-
-  let html = '';
-
-  function renderPhase(label, ck, h, d, o, isLast) {
+  function renderPhase(label, ck, phaseIdx) {
     if(!ck) return '';
-    const cost = h + d + o;
-    const prf = ck - cost;
+    const cost = costByPhase[phaseIdx];
+    const prf  = ck - cost;
     let s = '';
     s += `<div class="cost-split-row"><span>💳 ${label} nhận về</span><span>${fmtM(ck)}</span></div>`;
     if(cost) {
-      s += `<div class="cost-split-row"><span>🔻 Chi phí ${label.toLowerCase()} (÷${parts})</span><span style="color:var(--red)">−${fmtM(cost)}</span></div>`;
-      s += costDetail(h, d, o);
+      s += `<div class="cost-split-row"><span>🔻 Chi phí ${label.toLowerCase()} (÷${n})</span><span style="color:var(--red)">−${fmtM(cost)}</span></div>`;
+      s += costDetail(phaseIdx);
     }
     s += `<div class="cost-split-row"><span>📈 Lợi nhuận ${label.toLowerCase()}</span><span style="color:${prf>=0?'var(--green)':'var(--red)'};">${fmtM(prf)}</span></div>`;
     return s;
   }
 
-  if(_projMode === 1) {
-    html += renderPhase('Đợt 1', ck1, hPart, dPart, oPart, true);
-  } else if(_projMode === 2) {
-    html += renderPhase('Đợt 1', ck1, hPart, dPart, oPart, false);
-    if(ck2) { html += `<div style="height:6px"></div>`; html += renderPhase('Đợt 2', ck2, hLast, dLast, oLast, true); }
-    if(ck1 && ck2) {
-      const tot = (ck1+ck2) - totalCost;
-      html += `<div style="height:6px;border-top:1.5px dashed #bbf7d0;margin:4px 0"></div>`;
-      html += `<div class="cost-split-row total"><span>🏆 Tổng lợi nhuận</span><span style="color:${tot>=0?'var(--accent)':'var(--red)'};">${fmtM(tot)}</span></div>`;
-    }
-  } else {
-    // 3 đợt
-    html += renderPhase('Đợt 1', ck1, hPart, dPart, oPart, false);
-    if(ck2) { html += `<div style="height:6px"></div>`; html += renderPhase('Đợt 2', ck2, hPart, dPart, oPart, false); }
-    if(ck3) { html += `<div style="height:6px"></div>`; html += renderPhase('Đợt 3', ck3, hLast, dLast, oLast, true); }
-    const ckSum = (ck1||0)+(ck2||0)+(ck3||0);
-    if((ck1&&ck2)||(ck1&&ck3)||(ck2&&ck3)) {
-      const tot = ckSum - totalCost;
-      html += `<div style="height:6px;border-top:1.5px dashed #bbf7d0;margin:4px 0"></div>`;
-      html += `<div class="cost-split-row total"><span>🏆 Tổng lợi nhuận</span><span style="color:${tot>=0?'var(--accent)':'var(--red)'};">${fmtM(tot)}</span></div>`;
-    }
+  let html = '';
+  const cks = [ck1, ck2, ck3];
+  const labels = ['Đợt 1','Đợt 2','Đợt 3'];
+
+  for(let i = 0; i < n; i++) {
+    if(i > 0) html += `<div style="height:6px"></div>`;
+    html += renderPhase(labels[i], cks[i], i);
+  }
+
+  // Tổng nếu có từ 2 đợt trở lên đã nhập
+  const filled = cks.slice(0, n).filter(v => v > 0);
+  if(filled.length >= 2) {
+    const ckSum = cks.slice(0, n).reduce((s,v) => s+(v||0), 0);
+    const tot   = ckSum - totalCost;
+    html += `<div style="height:6px;border-top:1.5px dashed #bbf7d0;margin:4px 0"></div>`;
+    html += `<div class="cost-split-row total"><span>🏆 Tổng lợi nhuận (${n} đợt)</span><span style="color:${tot>=0?'var(--accent)':'var(--red)'};">${fmtM(tot)}</span></div>`;
   }
 
   rows.innerHTML = html;
