@@ -739,7 +739,7 @@ textarea{resize:vertical;min-height:65px;}
 </div><!-- /app -->
 
 <!-- MOBILE BOTTOM NAV -->
-<nav class="mobile-nav" id="mobileNav" style="display:none">
+<nav class="mobile-nav" id="mobileNav" style="display:none" style="display:none">
   <div class="mobile-nav-inner">
     <div class="mnav-item active" onclick="nav('dashboard')" data-pg="dashboard">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
@@ -869,183 +869,93 @@ textarea{resize:vertical;min-height:65px;}
 <!-- ==================== SCRIPTS ==================== -->
 
 <!-- Firebase SDK -->
+<!-- ==================== SCRIPTS ==================== -->
+
 <script type="module">
-import { initializeApp, getApps, getApp, deleteApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { initializeApp, getApps, deleteApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getFirestore, doc, setDoc, onSnapshot, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
-// ─── Constants ───────────────────────────────────────────────
-const APP_NAME = 'crm-app';   // fixed name → safe to deleteApp by name
+const APP_NAME = 'crm-app';
+let _db = null, _unsub = null;
 
-// ─── Shared state ────────────────────────────────────────────
-let _db          = null;
-let _unsubscribe = null;
-
-// ─── Sync UI helper ──────────────────────────────────────────
 function showSync(state, txt) {
-  const el = document.getElementById('syncStatus');
-  const t  = document.getElementById('syncTxt');
-  if(!el) return;
-  el.style.display = 'flex';
-  el.className = state;
-  t.textContent = txt;
-  if(state === 'ok') setTimeout(() => { el.style.display = 'none'; }, 3000);
+  var el = document.getElementById('syncStatus');
+  var t  = document.getElementById('syncTxt');
+  if (!el) return;
+  el.style.display = 'flex'; el.className = state; t.textContent = txt;
+  if (state === 'ok') setTimeout(function(){ el.style.display = 'none'; }, 3000);
 }
 
-// ─── Attach realtime listener ────────────────────────────────
 function attachListener(db) {
-  if(_unsubscribe) { try { _unsubscribe(); } catch(e) {} _unsubscribe = null; }
-  _unsubscribe = onSnapshot(
-    doc(db, 'crm', 'data'),
-    (snap) => {
-      if(!snap.exists()) return;
-      const d = snap.data();
-      // Chỉ update nếu có dữ liệu hợp lệ từ cloud
-      if(Array.isArray(d.C) && d.C.length >= 0) {
-        window.C = d.C;
-        // Sync lại biến local để các hàm saveCust/saveProj dùng đúng
-        if(typeof C !== 'undefined') { C.length = 0; d.C.forEach(x => C.push(x)); }
-      }
-      if(Array.isArray(d.P) && d.P.length >= 0) {
-        window.P = d.P;
-        if(typeof P !== 'undefined') { P.length = 0; d.P.forEach(x => P.push(x)); }
-      }
-      if(Array.isArray(d.S) && d.S.length >= 0) {
-        window.S = d.S;
-        if(typeof S !== 'undefined') { S.length = 0; d.S.forEach(x => S.push(x)); }
-      }
-      // Cache vào localStorage
-      localStorage.setItem('crm_c', JSON.stringify(window.C));
-      localStorage.setItem('crm_p', JSON.stringify(window.P));
-      localStorage.setItem('crm_s', JSON.stringify(window.S));
-      // Re-render nếu app đang mở
-      if(window._crmReady) {
-        window.updBadge();
-        window.render(window.curPg());
-        showSync('ok', '✓ Đã đồng bộ');
-      }
-      const bar = document.getElementById('fbStatusBar');
-      const txt = document.getElementById('fbStatusTxt');
-      if(bar){ bar.className='fb-status-bar connected'; txt.textContent='✅ Firebase đã kết nối – Dữ liệu đồng bộ realtime'; }
-    },
-    (err) => {
-      console.warn('[Firebase] Listener error:', err.code, err.message);
-      showSync('err', '⚠ Lỗi listener – ' + err.code);
+  if (_unsub) { try{ _unsub(); }catch(e){} _unsub = null; }
+  _unsub = onSnapshot(doc(db, 'crm', 'data'), function(snap) {
+    if (!snap.exists()) return;
+    var d = snap.data();
+    if (Array.isArray(d.C)) { window.C = d.C; }
+    if (Array.isArray(d.P)) { window.P = d.P; }
+    if (Array.isArray(d.S)) { window.S = d.S; }
+    if (Array.isArray(d.C)) localStorage.setItem('crm_c', JSON.stringify(d.C));
+    if (Array.isArray(d.P)) localStorage.setItem('crm_p', JSON.stringify(d.P));
+    if (Array.isArray(d.S)) localStorage.setItem('crm_s', JSON.stringify(d.S));
+    if (window._crmReady) {
+      window.C = window.C||[]; window.P = window.P||[]; window.S = window.S||[];
+      // Update global vars used by render functions
+      if(typeof C !== 'undefined') { C = window.C; P = window.P; S = window.S; }
+      updBadge(); render(curPg()); showSync('ok','✓ Đã đồng bộ');
     }
-  );
+    var bar = document.getElementById('fbStatusBar');
+    var txt2 = document.getElementById('fbStatusTxt');
+    if (bar) { bar.className='fb-status-bar connected'; txt2.textContent='✅ Firebase đã kết nối'; }
+  }, function(err) { showSync('err','⚠ '+err.code); });
 }
 
-// ─── Core init ───────────────────────────────────────────────
-async function doInitFirebase(cfg) {
+async function doInit(cfg) {
   try {
-    // 1. Clean up existing named app instance
-    const existing = getApps().find(a => a.name === APP_NAME);
-    if(existing) {
-      if(_unsubscribe) { try { _unsubscribe(); } catch(e) {} _unsubscribe = null; }
-      try { await deleteApp(existing); } catch(e) {}
-      _db = null;
-      window._fbReady = false;
+    var existing = getApps().find(function(a){ return a.name === APP_NAME; });
+    if (existing) { if(_unsub){try{_unsub();}catch(e){}_unsub=null;} await deleteApp(existing); _db=null; window._fbReady=false; }
+    var app = initializeApp(cfg, APP_NAME);
+    var db  = getFirestore(app);
+    // Probe - unavailable = Firestore chưa tạo, không phải lỗi config
+    var probeOk = false, probeErr = null;
+    try { await getDoc(doc(db,'crm','data')); probeOk=true; }
+    catch(e) {
+      if (e.code==='permission-denied') { probeOk=false; probeErr=e; }
+      else if (e.code==='unavailable'||e.code==='deadline-exceeded') { probeOk=true; } // soft fail
+      else { probeOk=false; probeErr=e; }
     }
-
-    // 2. Create new app with fixed name
-    const app = initializeApp(cfg, APP_NAME);
-    const db  = getFirestore(app);
-
-    // 3. Connectivity probe với timeout 8s
-    //    Các error codes được coi là "kết nối OK nhưng có vấn đề khác":
-    //    - 'unavailable'     : Firestore đang khởi động / cold start → vẫn OK
-    //    - 'not-found'       : Document chưa tồn tại → hoàn toàn bình thường
-    //    - 'permission-denied': Rules chưa set → cần báo riêng nhưng app vẫn init được
-    //    Chỉ throw khi lỗi thực sự là config sai (invalid-argument, unauthenticated do API key sai...)
-    const probeResult = await Promise.race([
-      getDoc(doc(db, 'crm', 'data')).then(r => ({ ok: true, snap: r })).catch(e => ({ ok: false, error: e })),
-      new Promise(res => setTimeout(() => res({ ok: false, error: { code: 'deadline-exceeded', message: 'Timeout 8s' } }), 8000))
-    ]);
-
-    // Phân loại lỗi probe
-    if(!probeResult.ok) {
-      const code = probeResult.error?.code || '';
-      const msg  = probeResult.error?.message || '';
-      // Lỗi config thực sự → không thể tiếp tục
-      if(code === 'invalid-argument' || msg.includes('bad request') || msg.includes('API key') || code === 'unauthenticated') {
-        throw probeResult.error;
-      }
-      // Lỗi Rules → app vẫn init, chỉ cảnh báo
-      if(code === 'permission-denied') {
-        console.warn('[Firebase] Probe: permission-denied – Firestore Rules cần update');
-        return { ok: false, error: probeResult.error, needsRules: true };
-      }
-      // unavailable / deadline-exceeded / network → app vẫn init được, Firestore sẽ retry tự động
-      console.warn('[Firebase] Probe soft-fail (will retry):', code, msg);
-    }
-
-    // 4. App init thành công
-    _db = db;
-    window._fbDb    = db;
-    window._fbReady = true;
-
-    window._fbSave = async function(C, P, S) {
-      if(!_db) return;
-      showSync('syncing', '↑ Đang lưu...');
-      try {
-        await setDoc(doc(_db, 'crm', 'data'), { C, P, S, updatedAt: Date.now() });
-        showSync('ok', '✓ Đã lưu lên cloud');
-      } catch(e) {
-        console.warn('[Firebase] Save failed:', e.code, e.message);
-        let hint = '';
-        if(e.code === 'permission-denied') hint = ' – Kiểm tra Firestore Rules!';
-        if(e.code === 'unavailable') hint = ' – Mất mạng hoặc Firestore offline';
-        showSync('err', '⚠ Lưu thất bại' + hint);
-      }
+    if (probeErr && probeErr.code !== 'permission-denied') throw probeErr;
+    _db=db; window._fbDb=db; window._fbReady=true;
+    window._fbSave = async function(C,P,S){
+      if(!_db)return;
+      showSync('syncing','↑ Đang lưu...');
+      try{ await setDoc(doc(_db,'crm','data'),{C:C,P:P,S:S,updatedAt:Date.now()}); showSync('ok','✓ Đã lưu cloud'); }
+      catch(e){ showSync('err','⚠ Lưu lỗi – '+e.code); }
     };
-
-    // 5. Start listener
-    attachListener(_db);
-
-    // 6. Push local data to cloud immediately
-    if(window.C && window.P && window.S) {
-      window._fbSave(window.C, window.P, window.S);
-    }
-
-    showSync('ok', '✓ Firebase kết nối');
-    console.log('[Firebase] Connected OK ✓');
-    return { ok: true };
-
+    attachListener(db);
+    if (window.C&&window.P&&window.S) window._fbSave(window.C,window.P,window.S);
+    showSync('ok','✓ Firebase kết nối');
+    if (probeErr && probeErr.code==='permission-denied') return {ok:false,needsRules:true};
+    return {ok:true};
   } catch(e) {
-    console.error('[Firebase] Init failed:', e.code, e.message);
-    window._fbReady = false;
-    _db = null;
-    showSync('err', '⚠ Firebase lỗi – ' + (e.code || e.message));
-    return { ok: false, error: e };
+    window._fbReady=false; _db=null;
+    showSync('err','⚠ Firebase lỗi – '+(e.code||e.message));
+    return {ok:false,error:e};
   }
 }
 
-// ─── Exposed to vanilla JS ────────────────────────────────────
-window._fbSetupListeners = function() {
-  if(_db) attachListener(_db);
-};
-window._fbReinit = async function(cfg) {
-  return doInitFirebase(cfg);
-};
+window._fbReinit = function(cfg){ return doInit(cfg); };
+window._fbSetupListeners = function(){ if(_db) attachListener(_db); };
 
-// ─── Auto-startup ─────────────────────────────────────────────
-(async function autoStart() {
-  let cfg = null;
-  try { cfg = JSON.parse(localStorage.getItem('crm_fb_config') || 'null'); } catch(e) {}
-  if(cfg && cfg.apiKey && cfg.projectId) {
-    console.log('[Firebase] Auto-connecting with saved config...');
-    await doInitFirebase(cfg);
-  } else {
-    console.log('[Firebase] No saved config – offline mode');
-    setTimeout(() => {
-      const el = document.getElementById('syncStatus');
-      if(el) el.style.display = 'none';
-    }, 1500);
-  }
+// Auto-connect
+(function(){
+  var cfg = null;
+  try{ cfg = JSON.parse(localStorage.getItem('crm_fb_config')||'null'); }catch(e){}
+  if(cfg && cfg.apiKey && cfg.projectId) doInit(cfg);
+  else setTimeout(function(){ var el=document.getElementById('syncStatus'); if(el)el.style.display='none'; },1500);
 })();
 </script>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
 
 // ===== LOGIN =====
 const ADMIN_USER = 'admin';
@@ -1078,24 +988,25 @@ function doLogout() {
 }
 
 function showApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appRoot').style.display = 'flex';
   if(window.innerWidth <= 768) {
     document.getElementById('mobileNav').style.display = 'block';
+    // make dash-grid single column on mobile
     const dg = document.querySelector('.dash-grid');
     if(dg) dg.style.gridTemplateColumns = '1fr';
     const fg = document.querySelector('.fu-grid');
     if(fg) fg.style.gridTemplateColumns = '1fr';
   }
   initData();
-  window._crmReady = true;
   if(window._fbSetupListeners) window._fbSetupListeners();
+  window._crmReady = true;
 }
 
 // Enter key on login
 document.getElementById('lgPass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 document.getElementById('lgUser').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('lgPass').focus(); });
 
-// Auto-start app (login đã tắt)
-showApp();
 
 // ===== MOBILE SIDEBAR =====
 function openSidebar() {
@@ -1111,19 +1022,13 @@ function closeSidebar() {
 let C = [], P = [], S = [];
 
 function initData() {
-  // Load from localStorage (fastest, always available)
   C = JSON.parse(localStorage.getItem('crm_c')||'[]');
   P = JSON.parse(localStorage.getItem('crm_p')||'[]');
   S = JSON.parse(localStorage.getItem('crm_s')||'[]');
   window.C = C; window.P = P; window.S = S;
-
-  // Seed demo data nếu chưa có gì
-  if(!C.length && !P.length) {
-    S=[
-      {id:1,name:'Minh Tuấn',phone:'0901000001',email:'',note:'Lead Sales'},
-      {id:2,name:'Thu Hương',phone:'0901000002',email:'',note:''},
-      {id:3,name:'Quốc Anh',phone:'0901000003',email:'',note:''}
-    ];
+  // Seed data if empty
+  if(!C.length) {
+    S=[{id:1,name:'Minh Tuấn',phone:'0901000001',email:'',note:'Lead Sales'},{id:2,name:'Thu Hương',phone:'0901000002',email:'',note:''},{id:3,name:'Quốc Anh',phone:'0901000003',email:'',note:''}];
     C=[
       {id:1,name:'Nguyễn Thị Lan',phone:'0901234567',email:'lan@gmail.com',service:'Website bán hàng',source:'facebook',sId:1,status:'done',vat:'no',fd:'',ft:'',note:'Bàn giao web thời trang',ca:'2025-01-10'},
       {id:2,name:'Trần Minh Quân',phone:'0912345678',email:'',service:'Landing page',source:'personal',sId:1,status:'dev',vat:'yes',fd:'',ft:'',note:'Cần xuất hóa đơn VAT',ca:'2025-02-01'},
@@ -1137,7 +1042,7 @@ function initData() {
       {id:2,name:'Landing page ABC',cId:2,sId:1,ck1:3000000,ck2:0,total:6000000,host:400000,dom:200000,oth:0,note:'Đang dev, đợt 2 chưa CK',sd:'2025-02-05',ed:'',st:'inprogress'},
       {id:3,name:'Website công ty Minh Quân',cId:2,sId:2,ck1:4000000,ck2:4000000,total:8000000,host:600000,dom:300000,oth:500000,note:'',sd:'2024-12-01',ed:'2025-01-20',st:'warranty'},
     ];
-    window.C=C; window.P=P; window.S=S;
+    window.C=C;window.P=P;window.S=S;
     save();
   }
   updBadge();
@@ -1147,11 +1052,9 @@ function initData() {
 }
 
 function save() {
-  // Always keep window refs in sync
-  window.C = C; window.P = P; window.S = S;
-  localStorage.setItem('crm_c', JSON.stringify(C));
-  localStorage.setItem('crm_p', JSON.stringify(P));
-  localStorage.setItem('crm_s', JSON.stringify(S));
+  localStorage.setItem('crm_c',JSON.stringify(C));
+  localStorage.setItem('crm_p',JSON.stringify(P));
+  localStorage.setItem('crm_s',JSON.stringify(S));
   // Sync to Firebase
   if(window._fbSave) window._fbSave(C, P, S);
 }
@@ -1229,7 +1132,6 @@ function popSel(id){
 function saveCust(){
   const name=document.getElementById('cName').value.trim(),phone=document.getElementById('cPhone').value.trim();
   if(!name||!phone){alert('Nhập tên và SĐT!');return;}
-  C=window.C; // luôn dùng array mới nhất
   C.push({id:Date.now(),name,phone,email:document.getElementById('cEmail').value.trim(),service:document.getElementById('cService').value.trim(),sId:parseInt(document.getElementById('cSales').value)||null,source:document.getElementById('cSource').value,status:document.getElementById('cStatus').value,vat:document.getElementById('cVat').value,fd:document.getElementById('cFDate').value,ft:document.getElementById('cFTime').value,note:document.getElementById('cNote').value.trim(),ca:td()});
   save();closeM('mAddCust');
   ['cName','cPhone','cEmail','cService','cNote','cFDate','cFTime'].forEach(i=>document.getElementById(i).value='');
@@ -1253,7 +1155,6 @@ function editCust(id){
   document.getElementById('mEditCust').classList.add('open');
 }
 function updCust(){
-  C=window.C; // sync
   const id=parseInt(document.getElementById('ecId').value);
   const idx=C.findIndex(x=>x.id===id);if(idx===-1)return;
   const ns=document.getElementById('ecSt').value;
@@ -1261,14 +1162,13 @@ function updCust(){
   if(ns==='done'||ns==='lost'){C[idx].fd='';C[idx].ft='';}
   save();closeM('mEditCust');updBadge();render(curPg());
 }
-function delCust(id){if(!confirm('Xóa khách hàng?'))return;C=window.C.filter(x=>x.id!==id);window.C=C;save();updBadge();render(curPg());}
+function delCust(id){if(!confirm('Xóa khách hàng?'))return;C=C.filter(x=>x.id!==id);save();updBadge();render(curPg());}
 
 // ===== PROJECTS =====
 function saveProj(){
   const name=document.getElementById('pName').value.trim();
   const cId=parseInt(document.getElementById('pCust').value);
   if(!name||!cId){alert('Nhập tên và chọn KH!');return;}
-  P=window.P; // luôn dùng array mới nhất
   const np={id:editPId||Date.now(),name,cId,sId:parseInt(document.getElementById('pSales').value)||null,ck1:getF('pCk1'),ck2:getF('pCk2'),total:getF('pTotal'),host:getF('pHost'),dom:getF('pDom'),oth:getF('pOth'),note:document.getElementById('pNote').value.trim(),sd:document.getElementById('pStart').value,ed:document.getElementById('pEnd').value,st:document.getElementById('pSt').value};
   if(editPId){const i=P.findIndex(x=>x.id===editPId);P[i]=np;editPId=null;}else P.push(np);
   save();closeM('mAddProj');
@@ -1290,19 +1190,18 @@ function editProj(id){
   document.getElementById('pSt').value=p.st;
   document.getElementById('mAddProj').classList.add('open');
 }
-function delProj(id){if(!confirm('Xóa dự án?'))return;P=window.P.filter(x=>x.id!==id);window.P=P;save();render('projects');}
+function delProj(id){if(!confirm('Xóa dự án?'))return;P=P.filter(x=>x.id!==id);save();render('projects');}
 
 // ===== SALES =====
 function saveSales(){
   const name=document.getElementById('sName').value.trim();
   if(!name){alert('Nhập tên!');return;}
-  S=window.S;
   S.push({id:Date.now(),name,phone:document.getElementById('sPhone').value.trim(),email:document.getElementById('sEmail').value.trim(),note:document.getElementById('sNote').value.trim()});
   save();closeM('mAddSales');
   ['sName','sPhone','sEmail','sNote'].forEach(i=>document.getElementById(i).value='');
   renderSales();
 }
-function delSales(id){if(!confirm('Xóa sales?'))return;S=window.S.filter(x=>x.id!==id);window.S=S;save();renderSales();}
+function delSales(id){if(!confirm('Xóa sales?'))return;S=S.filter(x=>x.id!==id);save();renderSales();}
 function editSales(id){
   const s=S.find(x=>x.id===id);if(!s)return;
   document.getElementById('esId').value=id;
@@ -1313,7 +1212,6 @@ function editSales(id){
   document.getElementById('mEditSales').classList.add('open');
 }
 function updSales(){
-  S=window.S;
   const id=parseInt(document.getElementById('esId').value);
   const idx=S.findIndex(x=>x.id===id);if(idx===-1)return;
   const name=document.getElementById('esName').value.trim();
@@ -1544,8 +1442,8 @@ function renderFU(){
     <td><div class="inline-actions"><button class="btn btn-ghost btn-sm" onclick="editCust(${c.id})">✏️</button><button class="btn btn-success btn-sm" onclick="markDone(${c.id})">✅ Chốt</button><button class="btn btn-danger btn-sm" onclick="markLost(${c.id})">❌</button></div></td>
   </tr>`).join(''):'<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text3)">Không có lịch</td></tr>';
 }
-function markDone(id){C=window.C;const i=C.findIndex(x=>x.id===id);if(i===-1)return;if(!confirm(`Đánh dấu "${C[i].name}" đã chốt?`))return;C[i].status='done';C[i].fd='';C[i].ft='';save();updBadge();renderFU();}
-function markLost(id){C=window.C;const i=C.findIndex(x=>x.id===id);if(i===-1)return;if(!confirm(`Đánh dấu "${C[i].name}" không chốt được?`))return;C[i].status='lost';C[i].fd='';C[i].ft='';save();updBadge();renderFU();}
+function markDone(id){const i=C.findIndex(x=>x.id===id);if(i===-1)return;if(!confirm(`Đánh dấu "${C[i].name}" đã chốt?`))return;C[i].status='done';C[i].fd='';C[i].ft='';save();updBadge();renderFU();}
+function markLost(id){const i=C.findIndex(x=>x.id===id);if(i===-1)return;if(!confirm(`Đánh dấu "${C[i].name}" không chốt được?`))return;C[i].status='lost';C[i].fd='';C[i].ft='';save();updBadge();renderFU();}
 
 // ===== SALES PAGE =====
 function renderSales(){
@@ -1717,14 +1615,14 @@ function updateConfigPreview(){
   if(el) el.addEventListener('input', updateConfigPreview);
 });
 
-async function saveFbConfig(){
+function saveFbConfig(){
   const cfg = getFormFbConfig();
   if(!cfg.apiKey||!cfg.projectId){
     showFbTestResult('err','⚠️ Vui lòng nhập ít nhất API Key và Project ID');
     return;
   }
   localStorage.setItem('crm_fb_config', JSON.stringify(cfg));
-  showFbTestResult('ok','💾 Đã lưu config! Đang kết nối...');
+  showFbTestResult('ok','💾 Đã lưu config! Đang kết nối lại Firebase...');
   updateFbStatusBar();
   checkFbSetupBadge();
   // Re-init Firebase with new config
@@ -1777,38 +1675,21 @@ async function testFbConnection(){
     btn.textContent=origTxt;btn.disabled=false;
     return;
   }
-  if(!window._fbReinit){
-    showFbTestResult('err','❌ Firebase SDK chưa sẵn sàng. Chờ vài giây rồi thử lại.');
-    btn.textContent=origTxt;btn.disabled=false;
-    return;
-  }
-  showFbTestResult('ok','⏳ Đang kết nối thử...');
-  const result = await window._fbReinit(cfg);
-  if(result.ok){
-    showFbTestResult('ok','✅ Kết nối Firebase thành công! API Key & Project ID hợp lệ.');
-    updateFbStatusBar(true,'✅ Test thành công – Firebase hoạt động');
-    localStorage.setItem('crm_fb_config', JSON.stringify(cfg));
-    checkFbSetupBadge();
-  } else if(result.needsRules){
-    const el = document.getElementById('fbTestResult');
-    if(el){ el.className='test-result err'; el.innerHTML='🔒 <strong>Firestore Rules đang chặn truy cập!</strong><br>👉 Vào Firebase Console → Firestore Database → Rules → Paste rules bên dưới → <strong>Publish</strong>'; el.style.display='block'; }
-    updateFbStatusBar(false,'⚠️ Firestore Rules chặn – xem hướng dẫn bên dưới');
-  } else {
-    const errMsg = result.error ? (result.error.code || result.error.message) : 'Lỗi không xác định';
-    let hint = '';
-    if(errMsg.includes('api-key') || errMsg.includes('API_KEY') || errMsg.includes('invalid-api-key'))
-      hint = '<br>👉 Kiểm tra lại <strong>API Key</strong> trong Firebase Console → Project Settings';
-    else if(errMsg.includes('project') || errMsg.includes('not-found'))
-      hint = '<br>👉 Kiểm tra lại <strong>Project ID</strong> – phải khớp chính xác với tên project';
-    else if(errMsg.includes('permission') || errMsg.includes('PERMISSION_DENIED') || errMsg.includes('insufficient'))
-      hint = '<br>👉 Vào <strong>Firestore → Rules</strong> → đổi thành <code>allow read, write: if true;</code> → Publish';
-    else if(errMsg.includes('network') || errMsg.includes('Failed to fetch') || errMsg.includes('offline'))
-      hint = '<br>👉 Kiểm tra <strong>kết nối mạng</strong> hoặc thử lại sau';
-    else if(errMsg.includes('auth'))
-      hint = '<br>👉 Kiểm tra <strong>authDomain</strong> và <strong>apiKey</strong>';
-    showFbTestResult('err', '❌ Lỗi: ' + errMsg + (hint ? '<br>' + hint : ''));
-    document.getElementById('fbTestResult').innerHTML = '❌ Lỗi: ' + errMsg + hint;
-    updateFbStatusBar(false,'❌ Kết nối thất bại: ' + errMsg);
+  try {
+    const testUrl=`https://firestore.googleapis.com/v1/projects/${cfg.projectId}/databases/(default)/documents/crm?pageSize=1&key=${cfg.apiKey}`;
+    const res=await fetch(testUrl,{method:'GET'});
+    if(res.ok||res.status===404){
+      showFbTestResult('ok','✅ Kết nối Firebase thành công! Project ID hợp lệ.');
+      updateFbStatusBar(true,'✅ Test thành công – Firebase hoạt động');
+    } else if(res.status===403){
+      showFbTestResult('err','🔒 Lỗi 403: Kiểm tra Firestore Security Rules (cần set allow read, write: if true)');
+    } else if(res.status===400){
+      showFbTestResult('err','❌ Lỗi 400: API Key hoặc Project ID không đúng');
+    } else {
+      showFbTestResult('err',`❌ Lỗi ${res.status}: Kiểm tra lại thông tin config`);
+    }
+  } catch(e){
+    showFbTestResult('err','❌ Không thể kết nối. Kiểm tra lại API Key hoặc Project ID: '+e.message);
   }
   btn.textContent=origTxt;btn.disabled=false;
 }
@@ -1829,51 +1710,31 @@ function checkFbSetupBadge(){
 }
 
 function parseFbPaste(){
-  const rawInput = document.getElementById('fbPasteBox').value;
-  const result   = document.getElementById('parseResult');
+  const raw = document.getElementById('fbPasteBox').value;
+  const result = document.getElementById('parseResult');
   try {
-    // Normalize Unicode/smart quotes → straight quotes
-    let raw = rawInput
-      .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"')
-      .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'");
-
-    // Extract everything between the outermost { }
-    const braceMatch = raw.match(/firebaseConfig\s*=\s*\{([\s\S]*?)\}/);
-    const block = braceMatch ? braceMatch[1] : (raw.match(/\{([\s\S]*?)\}/) || [null,''])[1];
-    if(!block.trim()) throw new Error('Không tìm thấy object firebaseConfig {...}');
-
-    // Parse key: "value" pairs – handles strings containing : or /
+    // Extract the object content
+    const match = raw.match(/\{([^}]+)\}/s);
+    if(!match) throw new Error('Không tìm thấy object {...}');
     const obj = {};
-    const lineRe = /(\w+)\s*:\s*["']([\s\S]*?)["']\s*,?\s*$/mg;
-    let m;
-    while((m = lineRe.exec(block)) !== null) {
-      obj[m[1]] = m[2];
-    }
-
-    if(!obj.apiKey) throw new Error('Không tìm thấy trường apiKey');
-
-    // Fill form fields
-    const fields = {
-      fb_apiKey:           obj.apiKey,
-      fb_authDomain:       obj.authDomain,
-      fb_projectId:        obj.projectId,
-      fb_storageBucket:    obj.storageBucket,
-      fb_messagingSenderId:obj.messagingSenderId,
-      fb_appId:            obj.appId
-    };
-    Object.entries(fields).forEach(([id, val]) => {
-      const el = document.getElementById(id);
-      if(el && val) el.value = val;
-    });
-
+    const pairs = match[1].matchAll(/(\w+)\s*:\s*["']([^"']+)["']/g);
+    for(const [,k,v] of pairs) obj[k]=v;
+    if(!obj.apiKey) throw new Error('Không tìm thấy apiKey');
+    // Fill form
+    if(obj.apiKey) document.getElementById('fb_apiKey').value=obj.apiKey;
+    if(obj.authDomain) document.getElementById('fb_authDomain').value=obj.authDomain;
+    if(obj.projectId) document.getElementById('fb_projectId').value=obj.projectId;
+    if(obj.storageBucket) document.getElementById('fb_storageBucket').value=obj.storageBucket;
+    if(obj.messagingSenderId) document.getElementById('fb_messagingSenderId').value=obj.messagingSenderId;
+    if(obj.appId) document.getElementById('fb_appId').value=obj.appId;
     updateConfigPreview();
-    result.className = 'test-result ok';
-    result.textContent = '✅ Parse thành công! Kiểm tra lại các field và nhấn 💾 Lưu & Kết nối.';
-    result.style.display = 'block';
+    result.className='test-result ok';
+    result.textContent='✅ Parse thành công! Kiểm tra lại các field và nhấn Lưu & Kết nối.';
+    result.style.display='block';
   } catch(e) {
-    result.className = 'test-result err';
-    result.textContent = '❌ Lỗi parse: ' + e.message + '. Hãy paste toàn bộ đoạn firebaseConfig = {...}';
-    result.style.display = 'block';
+    result.className='test-result err';
+    result.textContent='❌ Lỗi parse: '+e.message+'. Hãy paste toàn bộ đoạn firebaseConfig = {...}';
+    result.style.display='block';
   }
 }
 
@@ -1893,64 +1754,60 @@ service cloud.firestore {
   }).catch(()=>alert('Copy thủ công:\n'+rules));
 }
 
-async function reinitFirebase(cfg){
-  if(!window._fbReinit){
-    showFbTestResult('err','❌ Firebase SDK chưa load xong. Thử lại sau 2 giây.');
-    return;
-  }
-  showFbTestResult('ok','⏳ Đang kết nối Firebase...');
-  const bar = document.getElementById('fbStatusBar');
-  const txt = document.getElementById('fbStatusTxt');
-  if(bar){ bar.className='fb-status-bar unknown'; txt.textContent='⏳ Đang kết nối...'; }
-
-  const result = await window._fbReinit(cfg);
-
-  if(result.ok){
-    if(bar){ bar.className='fb-status-bar connected'; txt.textContent='✅ Firebase đã kết nối – Dữ liệu đồng bộ realtime'; }
-    showFbTestResult('ok','✅ Kết nối Firebase thành công! Dữ liệu đang đồng bộ realtime.');
-  } else if(result.needsRules){
-    // App init OK nhưng Firestore Rules chưa cho phép
-    if(bar){ bar.className='fb-status-bar disconnected'; txt.textContent='⚠️ Firebase kết nối nhưng Firestore Rules bị chặn'; }
-    showFbTestResult('err',
-      '🔒 Firestore Rules đang chặn truy cập!
-
-' +
-      '👉 Vào Firebase Console → Firestore Database → Rules
-' +
-      '→ Xóa toàn bộ → Paste rules bên dưới → Nhấn Publish:
-
-' +
-      'rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /crm/{doc} {
-      allow read, write: if true;
+function reinitFirebase(cfg){
+  // Dynamically reload Firebase with new config
+  // Since ES modules can't be re-imported, we reload via script injection
+  window._fbReady = false;
+  const script = document.createElement('script');
+  script.type = 'module';
+  script.textContent = `
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+    import { getFirestore, doc, setDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+    try {
+      const cfg = ${JSON.stringify(cfg)};
+      const app = initializeApp(cfg, 'crm-reinit-'+Date.now());
+      const db = getFirestore(app);
+      window._fbReady = true;
+      window._fbSave = async function(C,P,S){
+        try{
+          await setDoc(doc(db,'crm','data'),{C,P,S,updatedAt:Date.now()});
+          const s=document.getElementById('syncStatus');const t=document.getElementById('syncTxt');
+          if(s){s.style.display='flex';s.className='ok';t.textContent='✓ Đã lưu cloud';}
+          setTimeout(()=>{if(s)s.style.display='none';},3000);
+        }catch(e){console.warn('Save fail',e);}
+      };
+      onSnapshot(doc(db,'crm','data'),(snap)=>{
+        if(snap.exists()){
+          const d=snap.data();
+          if(d.C)window.C=d.C;if(d.P)window.P=d.P;if(d.S)window.S=d.S;
+          localStorage.setItem('crm_c',JSON.stringify(window.C));
+          localStorage.setItem('crm_p',JSON.stringify(window.P));
+          localStorage.setItem('crm_s',JSON.stringify(window.S));
+          if(window._crmReady){window.updBadge();window.render(window.curPg());}
+          const el=document.getElementById('fbStatusBar');const t=document.getElementById('fbStatusTxt');
+          if(el){el.className='fb-status-bar connected';t.textContent='✅ Firebase đã kết nối – Dữ liệu đồng bộ realtime';}
+        }
+      });
+      // Trigger initial push of local data
+      if(window.C&&window.P&&window.S){window._fbSave(window.C,window.P,window.S);}
+      console.log('[Firebase] Re-initialized successfully');
+    } catch(e) {
+      console.warn('[Firebase] Reinit failed:',e);
+      const el=document.getElementById('fbStatusBar');const t=document.getElementById('fbStatusTxt');
+      if(el){el.className='fb-status-bar disconnected';t.textContent='❌ Kết nối thất bại: '+e.message;}
+      const r=document.getElementById('fbTestResult');
+      if(r){r.className='test-result err';r.textContent='❌ Lỗi kết nối: '+e.message;r.style.display='block';}
     }
-  }
-}'
-    );
-  } else {
-    const errCode = result.error ? (result.error.code || '') : '';
-    const errMsg  = result.error ? (result.error.code || result.error.message || 'Lỗi không xác định') : 'Lỗi không xác định';
-    if(bar){ bar.className='fb-status-bar disconnected'; txt.textContent='❌ Kết nối thất bại: ' + errMsg; }
-    let hint = '';
-    if(errCode === 'unavailable' || errMsg.includes('unavailable'))
-      hint = '<br>👉 <strong>Firestore chưa được tạo</strong> – Vào <a href="https://console.firebase.google.com" target="_blank" style="color:var(--accent)">Firebase Console</a> → Build → Firestore Database → Create database → Start in test mode → Enable';
-    else if(errCode.includes('api-key') || errMsg.includes('API_KEY') || errCode === 'invalid-api-key')
-      hint = '<br>👉 <strong>API Key không hợp lệ</strong> – Kiểm tra lại trong Project Settings';
-    else if(errMsg.includes('project') || errCode === 'not-found')
-      hint = '<br>👉 <strong>Project ID sai</strong> – Kiểm tra lại tên project';
-    else if(errCode === 'permission-denied' || errMsg.includes('permission'))
-      hint = '<br>👉 Vào <strong>Firestore → Rules</strong> → đổi thành <code>allow read, write: if true;</code> → Publish';
-    else if(errMsg.includes('network') || errMsg.includes('fetch') || errCode === 'deadline-exceeded')
-      hint = '<br>👉 Kiểm tra <strong>kết nối mạng</strong> rồi thử lại';
-    const el = document.getElementById('fbTestResult');
-    if(el){ el.className='test-result err'; el.innerHTML='❌ Lỗi: <strong>' + errMsg + '</strong>' + hint; el.style.display='block'; }
-  }
+  `;
+  document.head.appendChild(script);
 }
 
-// Auto-load: Firebase module handles init; just update badge on DOM ready
+// Auto-load saved config on startup
 window.addEventListener('DOMContentLoaded', ()=>{
+  const cfg = getSavedFbConfig();
+  if(cfg?.apiKey) {
+    setTimeout(()=>reinitFirebase(cfg), 800);
+  }
   checkFbSetupBadge();
 });
 
@@ -1965,49 +1822,12 @@ function handleResize(){
 }
 window.addEventListener('resize', handleResize);
 
-  // ── Expose all functions needed by inline onclick handlers ──
-  window.doLogin = doLogin;
-  window.doLogout = doLogout;
-  window.openSidebar = openSidebar;
-  window.closeSidebar = closeSidebar;
-  window.nav = nav;
-  window.openM = openM;
-  window.closeM = closeM;
-  window.saveCust = saveCust;
-  window.editCust = editCust;
-  window.updCust = updCust;
-  window.delCust = delCust;
-  window.saveProj = saveProj;
-  window.editProj = editProj;
-  window.delProj = delProj;
-  window.saveSales = saveSales;
-  window.editSales = editSales;
-  window.updSales = updSales;
-  window.delSales = delSales;
-  window.markDone = markDone;
-  window.markLost = markLost;
-  window.swTab = swTab;
-  window.fmtInput = fmtInput;
-  window.renderDash = renderDash;
-  window.renderCust = renderCust;
-  window.renderProj = renderProj;
-  window.renderFU = renderFU;
-  window.renderSales = renderSales;
-  window.renderDebt = renderDebt;
-  window.renderSettings = renderSettings;
-  window.saveFbConfig = saveFbConfig;
-  window.clearFbConfig = clearFbConfig;
-  window.testFbConnection = testFbConnection;
-  window.parseFbPaste = parseFbPaste;
-  window.copyRules = copyRules;
-  window.reinitFirebase = reinitFirebase;
-  window.updateConfigPreview = updateConfigPreview;
-  window.getSavedFbConfig = getSavedFbConfig;
-  window.checkFbSetupBadge = checkFbSetupBadge;
-  window.showFbTestResult = showFbTestResult;
-  window.updBadge = updBadge;
-
-});
+// ── Khởi động ──
+initData();
+if(window._fbSetupListeners) window._fbSetupListeners();
+window._crmReady = true;
+checkFbSetupBadge();
+handleResize();
 </script>
 </body>
 </html>
