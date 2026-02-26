@@ -886,28 +886,36 @@ function showSync(state, txt) {
   if (state === 'ok') setTimeout(function(){ el.style.display = 'none'; }, 3000);
 }
 
+// Flag để tránh onSnapshot ghi đè dữ liệu local khi user vừa save xong
+var _lastSaveAt = 0;
+
 function attachListener(db) {
   if (_unsub) { try{ _unsub(); }catch(e){} _unsub = null; }
   _unsub = onSnapshot(doc(db, 'crm', 'data'), function(snap) {
     if (!snap.exists()) return;
     var d = snap.data();
-    if (Array.isArray(d.C)) { window.C = d.C; }
-    if (Array.isArray(d.P)) { window.P = d.P; }
-    if (Array.isArray(d.S)) { window.S = d.S; }
-    if (Array.isArray(d.C)) localStorage.setItem('crm_c', JSON.stringify(d.C));
-    if (Array.isArray(d.P)) localStorage.setItem('crm_p', JSON.stringify(d.P));
-    if (Array.isArray(d.S)) localStorage.setItem('crm_s', JSON.stringify(d.S));
+
+    // Nếu vừa save xong trong vòng 3 giây thì bỏ qua snapshot này
+    // (tránh Firebase ghi đè ngược lại dữ liệu local vừa mới xóa/sửa)
+    var fbTime = d.updatedAt || 0;
+    if (fbTime <= _lastSaveAt + 500) return;
+
+    if (Array.isArray(d.C)) { window.C = d.C; localStorage.setItem('crm_c', JSON.stringify(d.C)); }
+    if (Array.isArray(d.P)) { window.P = d.P; localStorage.setItem('crm_p', JSON.stringify(d.P)); }
+    if (Array.isArray(d.S)) { window.S = d.S; localStorage.setItem('crm_s', JSON.stringify(d.S)); }
+
     if (window._crmReady) {
-      window.C = window.C||[]; window.P = window.P||[]; window.S = window.S||[];
-      // Update global vars used by render functions
-      if(typeof C !== 'undefined') { C = window.C; P = window.P; S = window.S; }
-      updBadge(); render(curPg()); showSync('ok','✓ Đã đồng bộ');
+      // Đồng bộ vào biến cục bộ C, P, S của app
+      C = window.C || []; P = window.P || []; S = window.S || [];
+      updBadge(); render(curPg()); showSync('ok','✓ Đã đồng bộ từ cloud');
     }
     var bar = document.getElementById('fbStatusBar');
     var txt2 = document.getElementById('fbStatusTxt');
-    if (bar) { bar.className='fb-status-bar connected'; txt2.textContent='✅ Firebase đã kết nối'; }
+    if (bar) { bar.className='fb-status-bar connected'; txt2.textContent='✅ Firebase đã kết nối – Realtime sync'; }
   }, function(err) { showSync('err','⚠ '+err.code); });
 }
+
+window._setLastSaveAt = function(t){ _lastSaveAt = t; };
 
 async function doInit(cfg) {
   try {
@@ -928,11 +936,18 @@ async function doInit(cfg) {
     window._fbSave = async function(C,P,S){
       if(!_db)return;
       showSync('syncing','↑ Đang lưu...');
-      try{ await setDoc(doc(_db,'crm','data'),{C:C,P:P,S:S,updatedAt:Date.now()}); showSync('ok','✓ Đã lưu cloud'); }
+      try{
+        const now = Date.now();
+        _lastSaveAt = now;
+        if(window._setLastSaveAt) window._setLastSaveAt(now);
+        await setDoc(doc(_db,'crm','data'),{C:C,P:P,S:S,updatedAt:now});
+        showSync('ok','✓ Đã lưu cloud');
+      }
       catch(e){ showSync('err','⚠ Lưu lỗi – '+e.code); }
     };
     attachListener(db);
-    if (window.C&&window.P&&window.S) window._fbSave(window.C,window.P,window.S);
+    // KHÔNG push dữ liệu local lên Firebase khi mới kết nối
+    // để tránh ghi đè dữ liệu cloud bằng localStorage cũ
     showSync('ok','✓ Firebase kết nối');
     if (probeErr && probeErr.code==='permission-denied') return {ok:false,needsRules:true};
     return {ok:true};
@@ -1026,7 +1041,7 @@ function initData() {
   P = JSON.parse(localStorage.getItem('crm_p')||'[]');
   S = JSON.parse(localStorage.getItem('crm_s')||'[]');
   window.C = C; window.P = P; window.S = S;
-  // Seed data if empty
+  // Seed data if empty (chỉ khi localStorage lẫn Firebase đều trống)
   if(!C.length) {
     S=[{id:1,name:'Minh Tuấn',phone:'0901000001',email:'',note:'Lead Sales'},{id:2,name:'Thu Hương',phone:'0901000002',email:'',note:''},{id:3,name:'Quốc Anh',phone:'0901000003',email:'',note:''}];
     C=[
@@ -1042,8 +1057,12 @@ function initData() {
       {id:2,name:'Landing page ABC',cId:2,sId:1,ck1:3000000,ck2:0,total:6000000,host:400000,dom:200000,oth:0,note:'Đang dev, đợt 2 chưa CK',sd:'2025-02-05',ed:'',st:'inprogress'},
       {id:3,name:'Website công ty Minh Quân',cId:2,sId:2,ck1:4000000,ck2:4000000,total:8000000,host:600000,dom:300000,oth:500000,note:'',sd:'2024-12-01',ed:'2025-01-20',st:'warranty'},
     ];
-    window.C=C;window.P=P;window.S=S;
-    save();
+    window.C=C; window.P=P; window.S=S;
+    // Lưu localStorage nhưng KHÔNG push lên Firebase ngay
+    // Firebase sẽ được push khi user thực sự thao tác đầu tiên
+    localStorage.setItem('crm_c',JSON.stringify(C));
+    localStorage.setItem('crm_p',JSON.stringify(P));
+    localStorage.setItem('crm_s',JSON.stringify(S));
   }
   updBadge();
   popDashSalesFilter();
@@ -1052,10 +1071,12 @@ function initData() {
 }
 
 function save() {
+  // Luôn đồng bộ window.* với biến local C, P, S
+  window.C = C; window.P = P; window.S = S;
   localStorage.setItem('crm_c',JSON.stringify(C));
   localStorage.setItem('crm_p',JSON.stringify(P));
   localStorage.setItem('crm_s',JSON.stringify(S));
-  // Sync to Firebase
+  // Sync lên Firebase (nếu đã kết nối)
   if(window._fbSave) window._fbSave(C, P, S);
 }
 
@@ -1770,7 +1791,9 @@ function reinitFirebase(cfg){
       window._fbReady = true;
       window._fbSave = async function(C,P,S){
         try{
-          await setDoc(doc(db,'crm','data'),{C,P,S,updatedAt:Date.now()});
+          const now = Date.now();
+          window._lastFbSaveAt = now;
+          await setDoc(doc(db,'crm','data'),{C,P,S,updatedAt:now});
           const s=document.getElementById('syncStatus');const t=document.getElementById('syncTxt');
           if(s){s.style.display='flex';s.className='ok';t.textContent='✓ Đã lưu cloud';}
           setTimeout(()=>{if(s)s.style.display='none';},3000);
@@ -1779,17 +1802,26 @@ function reinitFirebase(cfg){
       onSnapshot(doc(db,'crm','data'),(snap)=>{
         if(snap.exists()){
           const d=snap.data();
-          if(d.C)window.C=d.C;if(d.P)window.P=d.P;if(d.S)window.S=d.S;
-          localStorage.setItem('crm_c',JSON.stringify(window.C));
-          localStorage.setItem('crm_p',JSON.stringify(window.P));
-          localStorage.setItem('crm_s',JSON.stringify(window.S));
-          if(window._crmReady){window.updBadge();window.render(window.curPg());}
-          const el=document.getElementById('fbStatusBar');const t=document.getElementById('fbStatusTxt');
-          if(el){el.className='fb-status-bar connected';t.textContent='✅ Firebase đã kết nối – Dữ liệu đồng bộ realtime';}
+          // Bỏ qua nếu đây là echo của lần save vừa rồi
+          const fbTime = d.updatedAt || 0;
+          if(fbTime <= (window._lastFbSaveAt || 0) + 500) return;
+          if(d.C){window.C=d.C;localStorage.setItem('crm_c',JSON.stringify(d.C));}
+          if(d.P){window.P=d.P;localStorage.setItem('crm_p',JSON.stringify(d.P));}
+          if(d.S){window.S=d.S;localStorage.setItem('crm_s',JSON.stringify(d.S));}
+          if(window._crmReady){
+            // Quan trọng: cập nhật biến cục bộ C, P, S
+            C = window.C||[]; P = window.P||[]; S = window.S||[];
+            window.updBadge();window.render(window.curPg());
+            const s=document.getElementById('syncStatus');const t=document.getElementById('syncTxt');
+            if(s){s.style.display='flex';s.className='ok';t.textContent='✓ Đã đồng bộ từ cloud';}
+            setTimeout(()=>{if(s)s.style.display='none';},3000);
+          }
+          const el=document.getElementById('fbStatusBar');const t2=document.getElementById('fbStatusTxt');
+          if(el){el.className='fb-status-bar connected';t2.textContent='✅ Firebase đã kết nối – Dữ liệu đồng bộ realtime';}
         }
       });
-      // Trigger initial push of local data
-      if(window.C&&window.P&&window.S){window._fbSave(window.C,window.P,window.S);}
+      // KHÔNG push local data lên Firebase khi reconnect
+      // Để onSnapshot tự kéo data từ cloud xuống
       console.log('[Firebase] Re-initialized successfully');
     } catch(e) {
       console.warn('[Firebase] Reinit failed:',e);
