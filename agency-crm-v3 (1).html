@@ -1045,6 +1045,8 @@ window._fbReinit = async function(cfg) {
 </script>
 
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+
 // ===== LOGIN =====
 const ADMIN_USER = 'admin';
 const ADMIN_PASS = 'Mediafindme';
@@ -1967,6 +1969,50 @@ function handleResize(){
   if(fg)fg.style.gridTemplateColumns=isMobile?'1fr':'1fr 1fr';
 }
 window.addEventListener('resize', handleResize);
+
+  // ── Expose all functions needed by inline onclick handlers ──
+  window.doLogin = doLogin;
+  window.doLogout = doLogout;
+  window.openSidebar = openSidebar;
+  window.closeSidebar = closeSidebar;
+  window.nav = nav;
+  window.openM = openM;
+  window.closeM = closeM;
+  window.saveCust = saveCust;
+  window.editCust = editCust;
+  window.updCust = updCust;
+  window.delCust = delCust;
+  window.saveProj = saveProj;
+  window.editProj = editProj;
+  window.delProj = delProj;
+  window.saveSales = saveSales;
+  window.editSales = editSales;
+  window.updSales = updSales;
+  window.delSales = delSales;
+  window.markDone = markDone;
+  window.markLost = markLost;
+  window.swTab = swTab;
+  window.fmtInput = fmtInput;
+  window.renderDash = renderDash;
+  window.renderCust = renderCust;
+  window.renderProj = renderProj;
+  window.renderFU = renderFU;
+  window.renderSales = renderSales;
+  window.renderDebt = renderDebt;
+  window.renderSettings = renderSettings;
+  window.saveFbConfig = saveFbConfig;
+  window.clearFbConfig = clearFbConfig;
+  window.testFbConnection = testFbConnection;
+  window.parseFbPaste = parseFbPaste;
+  window.copyRules = copyRules;
+  window.reinitFirebase = reinitFirebase;
+  window.updateConfigPreview = updateConfigPreview;
+  window.getSavedFbConfig = getSavedFbConfig;
+  window.checkFbSetupBadge = checkFbSetupBadge;
+  window.showFbTestResult = showFbTestResult;
+  window.updBadge = updBadge;
+
+});
 </script>
 </body>
 </html>
