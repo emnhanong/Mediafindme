@@ -851,58 +851,76 @@ textarea{resize:vertical;min-height:65px;}
         <div class="form-group"><label>Tổng HĐ (₫)</label><div class="money-wrap"><input id="pTotal" type="text" inputmode="numeric" placeholder="0" oninput="fmtInput(this,'pTotalH');calcProjSplit()"></div><div class="money-hint" id="pTotalH"></div></div>
       </div>
 
-      <!-- CHI PHÍ CỐ ĐỊNH -->
-      <div style="margin:14px 0 10px;font-size:11px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">💰 Chi phí dự án (chia đôi theo từng đợt thanh toán)</div>
+      <!-- BƯỚC 1: CHỌN SỐ Giai đoạn TRƯỚC -->
+      <div style="margin:14px 0 8px;font-size:11px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">📋 Số giai đoạn thanh toán</div>
+      <div class="proj-ck-mode" style="margin-bottom:14px">
+        <div class="ck-mode-btn active" id="modeBtn1" onclick="setProjMode(1)">1️⃣ 1 giai đoạn</div>
+        <div class="ck-mode-btn" id="modeBtn2" onclick="setProjMode(2)">2️⃣ 2 giai đoạn</div>
+        <div class="ck-mode-btn" id="modeBtn3" onclick="setProjMode(3)">3️⃣ 3 giai đoạn</div>
+      </div>
+
+      <!-- BƯỚC 2: CHI PHÍ — label cập nhật theo số giai đoạn -->
+      <div style="font-size:11px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">
+        💰 Chi phí dự án
+        <span id="costSplitLabel" style="font-weight:600;color:var(--accent);text-transform:none;letter-spacing:0;margin-left:6px;font-size:11px">(chia đều mỗi giai đoạn)</span>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px">
-        <div class="form-group"><label>Hosting (₫/năm)</label><div class="money-wrap"><input id="pHost" type="text" inputmode="numeric" placeholder="0" oninput="fmtInput(this,'pHostH');calcProjSplit()"></div><div class="money-hint" id="pHostH"></div></div>
-        <div class="form-group"><label>Domain (₫/năm)</label><div class="money-wrap"><input id="pDom" type="text" inputmode="numeric" placeholder="0" oninput="fmtInput(this,'pDomH');calcProjSplit()"></div><div class="money-hint" id="pDomH"></div></div>
-        <div class="form-group"><label>CP khác (₫)</label><div class="money-wrap"><input id="pOth" type="text" inputmode="numeric" placeholder="0" oninput="fmtInput(this,'pOthH');calcProjSplit()"></div><div class="money-hint" id="pOthH"></div></div>
+        <div class="form-group">
+          <label>Hosting (₫/năm) <span id="hostSplitHint" style="font-size:10px;color:var(--text3)"></span></label>
+          <div class="money-wrap"><input id="pHost" type="text" inputmode="numeric" placeholder="0" oninput="fmtInput(this,'pHostH');calcProjSplit()"></div>
+          <div class="money-hint" id="pHostH"></div>
+        </div>
+        <div class="form-group">
+          <label>Domain (₫/năm) <span id="domSplitHint" style="font-size:10px;color:var(--text3)"></span></label>
+          <div class="money-wrap"><input id="pDom" type="text" inputmode="numeric" placeholder="0" oninput="fmtInput(this,'pDomH');calcProjSplit()"></div>
+          <div class="money-hint" id="pDomH"></div>
+        </div>
+        <div class="form-group">
+          <label>CP khác (₫) <span id="othSplitHint" style="font-size:10px;color:var(--text3)"></span></label>
+          <div class="money-wrap"><input id="pOth" type="text" inputmode="numeric" placeholder="0" oninput="fmtInput(this,'pOthH');calcProjSplit()"></div>
+          <div class="money-hint" id="pOthH"></div>
+        </div>
       </div>
 
-      <!-- MODE SELECTOR -->
-      <div style="font-size:11px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">📋 Đợt thanh toán</div>
-      <div class="proj-ck-mode">
-        <div class="ck-mode-btn active" id="modeBtn1" onclick="setProjMode(1)">💳 1 đợt</div>
-        <div class="ck-mode-btn" id="modeBtn2" onclick="setProjMode(2)">💳💳 2 đợt</div>
-        <div class="ck-mode-btn" id="modeBtn3" onclick="setProjMode(3)">💳💳💳 3 đợt</div>
-      </div>
+      <!-- BƯỚC 3: CK TỪNG ĐỢT -->
+      <div style="font-size:11px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">💳 Số tiền từng giai đoạn</div>
 
-      <!-- CK 1 -->
+      <!-- GĐ 1 -->
       <div class="ck-phase" id="ckPhase1">
-        <div class="ck-phase-title"><span class="phase-dot ck1"></span>Đợt 1</div>
+        <div class="ck-phase-title"><span class="phase-dot ck1"></span>Giai đoạn 1</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div class="form-group"><label>CK lần 1 (₫)</label><div class="money-wrap"><input id="pCk1" type="text" inputmode="numeric" placeholder="0" oninput="fmtInput(this,'pCk1H');calcProjSplit()"></div><div class="money-hint" id="pCk1H"></div></div>
           <div class="form-group"><label>Ngày bắt đầu</label><input id="pStart" type="date"></div>
         </div>
       </div>
 
-      <!-- CK 2 (ẩn khi mode 1) -->
+      <!-- GĐ 2 -->
       <div class="ck-phase" id="ckPhase2" style="display:none">
-        <div class="ck-phase-title"><span class="phase-dot ck2"></span>Đợt 2</div>
+        <div class="ck-phase-title"><span class="phase-dot ck2"></span>Giai đoạn 2</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div class="form-group"><label>CK lần 2 (₫)</label><div class="money-wrap"><input id="pCk2" type="text" inputmode="numeric" placeholder="0" oninput="fmtInput(this,'pCk2H');calcProjSplit()"></div><div class="money-hint" id="pCk2H"></div></div>
-          <div class="form-group"><label>Ngày bàn giao (đợt 2)</label><input id="pEnd" type="date"></div>
+          <div class="form-group"><label>Ngày (GĐ 2)</label><input id="pEnd" type="date"></div>
         </div>
       </div>
 
-      <!-- CK 3 (chỉ hiện khi mode 3) -->
+      <!-- GĐ 3 -->
       <div class="ck-phase" id="ckPhase3" style="display:none">
-        <div class="ck-phase-title"><span class="phase-dot" style="background:var(--orange)"></span>Đợt 3</div>
+        <div class="ck-phase-title"><span class="phase-dot" style="background:var(--orange)"></span>Giai đoạn 3</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div class="form-group"><label>CK lần 3 (₫)</label><div class="money-wrap"><input id="pCk3" type="text" inputmode="numeric" placeholder="0" oninput="fmtInput(this,'pCk3H');calcProjSplit()"></div><div class="money-hint" id="pCk3H"></div></div>
-          <div class="form-group"><label>Ngày bàn giao (đợt 3)</label><input id="pEnd3" type="date"></div>
+          <div class="form-group"><label>Ngày bàn giao</label><input id="pEnd3" type="date"></div>
         </div>
       </div>
 
       <!-- LIVE SUMMARY -->
       <div id="projSplitInfo" class="cost-split-info" style="display:none">
-        <div class="cost-split-title">📊 Tóm tắt lợi nhuận theo đợt</div>
+        <div class="cost-split-title">📊 Tóm tắt lợi nhuận theo giai đoạn</div>
         <div id="projSplitRows"></div>
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
         <div class="form-group"><label>Trạng thái</label><select id="pSt"><option value="pending">Chờ xử lý</option><option value="inprogress">Đang triển khai</option><option value="done">Đã bàn giao</option><option value="warranty">Bảo hành</option></select></div>
-        <div class="form-group" id="pEndWrap" style="display:none"><label>Ngày bàn giao</label><input id="pEndSingle" type="date"></div>
+        <div class="form-group" id="pEndWrap"><label>Ngày bàn giao</label><input id="pEndSingle" type="date"></div>
       </div>
       <div class="form-group" style="margin-top:10px"><label>Ghi chú</label><textarea id="pNote"></textarea></div>
     </div>
@@ -1484,11 +1502,10 @@ function bulkDelProj() {
 let _projMode = 1;
 function setProjMode(m) {
   _projMode = m;
-  document.getElementById('modeBtn1').classList.toggle('active', m===1);
-  document.getElementById('modeBtn2').classList.toggle('active', m===2);
-  document.getElementById('modeBtn3').classList.toggle('active', m===3);
+  [1,2,3].forEach(i => document.getElementById('modeBtn'+i).classList.toggle('active', i===m));
   document.getElementById('ckPhase2').style.display = m>=2 ? 'block' : 'none';
   document.getElementById('ckPhase3').style.display = m===3 ? 'block' : 'none';
+  // pEndWrap: ẩn khi mode 2 hoặc 3 (vì đã có ngày trong từng phase)
   document.getElementById('pEndWrap').style.display = m===1 ? 'block' : 'none';
   if(m===1){
     document.getElementById('pCk2').value=''; document.getElementById('pCk2H').textContent='';
@@ -1497,6 +1514,19 @@ function setProjMode(m) {
   if(m===2){
     document.getElementById('pCk3').value=''; document.getElementById('pCk3H').textContent='';
   }
+  // Cập nhật label hint chi phí theo số giai đoạn
+  const div = m===1 ? '' : `÷${m} = `;
+  const hv = getF('pHost'), dv = getF('pDom'), ov = getF('pOth');
+  const fmtHint = (v) => v ? `→ ${fmtM(Math.round(v/m))}/GĐ` : '';
+  const hh = document.getElementById('hostSplitHint');
+  const dh = document.getElementById('domSplitHint');
+  const oh = document.getElementById('othSplitHint');
+  if(hh) hh.textContent = m>1 ? fmtHint(hv) : '';
+  if(dh) dh.textContent = m>1 ? fmtHint(dv) : '';
+  if(oh) oh.textContent = m>1 ? fmtHint(ov) : '';
+  // Cập nhật label tiêu đề chi phí
+  const lbl = document.getElementById('costSplitLabel');
+  if(lbl) lbl.textContent = m===1 ? '' : `(chia đều cho ${m} giai đoạn)`;
   calcProjSplit();
 }
 function calcProjSplit() {
@@ -1505,24 +1535,29 @@ function calcProjSplit() {
   const totalCost = host + dom + oth;
   const info = document.getElementById('projSplitInfo');
   const rows = document.getElementById('projSplitRows');
+
+  // Cập nhật hint chia chi phí theo giai đoạn
+  const n = _projMode;
+  const fmtHint = (v) => v && n>1 ? `→ ${fmtM(Math.round(v/n))}/GĐ` : '';
+  const hh=document.getElementById('hostSplitHint'), dh=document.getElementById('domSplitHint'), oh=document.getElementById('othSplitHint');
+  if(hh) hh.textContent = fmtHint(host);
+  if(dh) dh.textContent = fmtHint(dom);
+  if(oh) oh.textContent = fmtHint(oth);
+
   if(!ck1 && !ck2 && !ck3) { info.style.display='none'; return; }
   info.style.display = 'block';
 
-  const n = _projMode; // số đợt: 1, 2, 3
-
-  // Chia đều từng khoản chi phí, đợt cuối lấy phần còn lại (tránh sai lệch làm tròn)
+  // Chia đều từng khoản, đợt cuối lấy phần còn lại
   function splitCost(total, numParts) {
     const per = Math.round(total / numParts);
     const parts = [];
     for(let i = 0; i < numParts - 1; i++) parts.push(per);
-    parts.push(total - per * (numParts - 1)); // đợt cuối = tổng - các đợt trước
+    parts.push(total - per * (numParts - 1));
     return parts;
   }
   const hS = splitCost(host, n);
   const dS = splitCost(dom,  n);
   const oS = splitCost(oth,  n);
-
-  // Chi phí mỗi đợt = hosting[i] + domain[i] + cp_khac[i]
   const costByPhase = hS.map((h, i) => h + dS[i] + oS[i]);
 
   function costDetail(i) {
@@ -1547,24 +1582,19 @@ function calcProjSplit() {
     return s;
   }
 
-  let html = '';
   const cks = [ck1, ck2, ck3];
-  const labels = ['Đợt 1','Đợt 2','Đợt 3'];
-
+  const labels = ['Giai đoạn 1','Giai đoạn 2','Giai đoạn 3'];
+  let html = '';
   for(let i = 0; i < n; i++) {
     if(i > 0) html += `<div style="height:6px"></div>`;
     html += renderPhase(labels[i], cks[i], i);
   }
-
-  // Tổng nếu có từ 2 đợt trở lên đã nhập
   const filled = cks.slice(0, n).filter(v => v > 0);
   if(filled.length >= 2) {
-    const ckSum = cks.slice(0, n).reduce((s,v) => s+(v||0), 0);
-    const tot   = ckSum - totalCost;
+    const tot = cks.slice(0, n).reduce((s,v)=>s+(v||0),0) - totalCost;
     html += `<div style="height:6px;border-top:1.5px dashed #bbf7d0;margin:4px 0"></div>`;
-    html += `<div class="cost-split-row total"><span>🏆 Tổng lợi nhuận (${n} đợt)</span><span style="color:${tot>=0?'var(--accent)':'var(--red)'};">${fmtM(tot)}</span></div>`;
+    html += `<div class="cost-split-row total"><span>🏆 Tổng lợi nhuận (${n} GĐ)</span><span style="color:${tot>=0?'var(--accent)':'var(--red)'};">${fmtM(tot)}</span></div>`;
   }
-
   rows.innerHTML = html;
 }
 window.calcProjSplit = calcProjSplit;
