@@ -870,13 +870,15 @@ textarea{resize:vertical;min-height:65px;}
 
 <!-- Firebase SDK -->
 <script type="module">
-import { initializeApp, getApps, deleteApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, doc, setDoc, onSnapshot, collection, getDocs, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { initializeApp, getApps, getApp, deleteApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, setDoc, onSnapshot, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+// ─── Constants ───────────────────────────────────────────────
+const APP_NAME = 'crm-app';   // fixed name → safe to deleteApp by name
 
 // ─── Shared state ────────────────────────────────────────────
-let _db = null;
-let _unsubscribe = null;   // keep listener ref to detach on reinit
-let _appInstance = null;
+let _db          = null;
+let _unsubscribe = null;
 
 // ─── Sync UI helper ──────────────────────────────────────────
 function showSync(state, txt) {
@@ -891,7 +893,7 @@ function showSync(state, txt) {
 
 // ─── Attach realtime listener ────────────────────────────────
 function attachListener(db) {
-  if(_unsubscribe) { try{ _unsubscribe(); }catch(e){} }
+  if(_unsubscribe) { try { _unsubscribe(); } catch(e) {} _unsubscribe = null; }
   _unsubscribe = onSnapshot(
     doc(db, 'crm', 'data'),
     (snap) => {
@@ -908,41 +910,42 @@ function attachListener(db) {
           window.render(window.curPg());
           showSync('ok', '✓ Đã đồng bộ');
         }
-        // Update status bar if on settings page
         const bar = document.getElementById('fbStatusBar');
         const txt = document.getElementById('fbStatusTxt');
         if(bar){ bar.className='fb-status-bar connected'; txt.textContent='✅ Firebase đã kết nối – Dữ liệu đồng bộ realtime'; }
       }
     },
     (err) => {
-      console.warn('[Firebase] Listener error:', err);
-      showSync('err', '⚠ Lỗi đồng bộ');
+      console.warn('[Firebase] Listener error:', err.code, err.message);
+      showSync('err', '⚠ Lỗi listener – ' + err.code);
     }
   );
 }
 
-// ─── Core init (accepts any config object) ───────────────────
+// ─── Core init ───────────────────────────────────────────────
 async function doInitFirebase(cfg) {
   try {
-    // Destroy previous app instance to avoid "duplicate app" errors
-    if(_appInstance) {
-      try { await deleteApp(_appInstance); } catch(e) {}
-      _appInstance = null;
+    // 1. Clean up existing named app instance
+    const existing = getApps().find(a => a.name === APP_NAME);
+    if(existing) {
+      if(_unsubscribe) { try { _unsubscribe(); } catch(e) {} _unsubscribe = null; }
+      try { await deleteApp(existing); } catch(e) {}
       _db = null;
       window._fbReady = false;
     }
 
-    _appInstance = initializeApp(cfg, 'crm-app-' + Date.now());
-    _db = getFirestore(_appInstance);
+    // 2. Create new app with fixed name
+    const app = initializeApp(cfg, APP_NAME);
+    const db  = getFirestore(app);
 
-    // Quick connectivity probe – write a tiny test doc
-    // (we use the user's data doc with merge:false probe; use getDoc instead)
-    await getDoc(doc(_db, 'crm', 'data'));   // throws if rules/network fail
+    // 3. Connectivity probe – getDoc doesn't require existing document
+    await getDoc(doc(db, 'crm', 'data'));
 
-    window._fbDb    = _db;
+    // 4. All good – expose globally
+    _db = db;
+    window._fbDb    = db;
     window._fbReady = true;
 
-    // Re-expose save helper
     window._fbSave = async function(C, P, S) {
       if(!_db) return;
       showSync('syncing', '↑ Đang lưu...');
@@ -950,50 +953,55 @@ async function doInitFirebase(cfg) {
         await setDoc(doc(_db, 'crm', 'data'), { C, P, S, updatedAt: Date.now() });
         showSync('ok', '✓ Đã lưu lên cloud');
       } catch(e) {
-        console.warn('[Firebase] Save failed:', e);
-        showSync('err', '⚠ Lưu thất bại – ' + e.code);
+        console.warn('[Firebase] Save failed:', e.code, e.message);
+        let hint = '';
+        if(e.code === 'permission-denied') hint = ' (Kiểm tra Firestore Rules!)';
+        showSync('err', '⚠ Lưu thất bại' + hint);
       }
     };
 
+    // 5. Start listener
     attachListener(_db);
 
-    // Push current local data to cloud on first connect
+    // 6. Push local data to cloud immediately
     if(window.C && window.P && window.S) {
       window._fbSave(window.C, window.P, window.S);
     }
 
     showSync('ok', '✓ Firebase kết nối');
-    console.log('[Firebase] Connected OK');
+    console.log('[Firebase] Connected OK ✓');
     return { ok: true };
+
   } catch(e) {
-    console.warn('[Firebase] Init failed:', e.message, e.code);
+    console.error('[Firebase] Init failed:', e.code, e.message);
     window._fbReady = false;
     _db = null;
-    showSync('err', '⚠ Offline – ' + (e.code || e.message));
+    showSync('err', '⚠ Firebase lỗi – ' + (e.code || e.message));
     return { ok: false, error: e };
   }
 }
 
-// ─── Exposed helpers used by vanilla-JS layer ─────────────────
-// Called by showApp() after login
+// ─── Exposed to vanilla JS ────────────────────────────────────
 window._fbSetupListeners = function() {
   if(_db) attachListener(_db);
 };
-
-// Called by saveFbConfig() and auto-startup
 window._fbReinit = async function(cfg) {
   return doInitFirebase(cfg);
 };
 
-// ─── Auto-startup: load saved config immediately ──────────────
+// ─── Auto-startup ─────────────────────────────────────────────
 (async function autoStart() {
   let cfg = null;
   try { cfg = JSON.parse(localStorage.getItem('crm_fb_config') || 'null'); } catch(e) {}
   if(cfg && cfg.apiKey && cfg.projectId) {
+    console.log('[Firebase] Auto-connecting with saved config...');
     await doInitFirebase(cfg);
   } else {
-    showSync('err', '⚠ Chưa cấu hình Firebase');
-    setTimeout(() => { document.getElementById('syncStatus').style.display='none'; }, 3000);
+    console.log('[Firebase] No saved config – offline mode');
+    setTimeout(() => {
+      const el = document.getElementById('syncStatus');
+      if(el) el.style.display = 'none';
+    }, 1500);
   }
 })();
 </script>
@@ -1771,31 +1779,51 @@ function checkFbSetupBadge(){
 }
 
 function parseFbPaste(){
-  const raw = document.getElementById('fbPasteBox').value;
-  const result = document.getElementById('parseResult');
+  const rawInput = document.getElementById('fbPasteBox').value;
+  const result   = document.getElementById('parseResult');
   try {
-    // Extract the object content
-    const match = raw.match(/\{([^}]+)\}/s);
-    if(!match) throw new Error('Không tìm thấy object {...}');
+    // Normalize Unicode/smart quotes → straight quotes
+    let raw = rawInput
+      .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"')
+      .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'");
+
+    // Extract everything between the outermost { }
+    const braceMatch = raw.match(/firebaseConfig\s*=\s*\{([\s\S]*?)\}/);
+    const block = braceMatch ? braceMatch[1] : (raw.match(/\{([\s\S]*?)\}/) || [null,''])[1];
+    if(!block.trim()) throw new Error('Không tìm thấy object firebaseConfig {...}');
+
+    // Parse key: "value" pairs – handles strings containing : or /
     const obj = {};
-    const pairs = match[1].matchAll(/(\w+)\s*:\s*["']([^"']+)["']/g);
-    for(const [,k,v] of pairs) obj[k]=v;
-    if(!obj.apiKey) throw new Error('Không tìm thấy apiKey');
-    // Fill form
-    if(obj.apiKey) document.getElementById('fb_apiKey').value=obj.apiKey;
-    if(obj.authDomain) document.getElementById('fb_authDomain').value=obj.authDomain;
-    if(obj.projectId) document.getElementById('fb_projectId').value=obj.projectId;
-    if(obj.storageBucket) document.getElementById('fb_storageBucket').value=obj.storageBucket;
-    if(obj.messagingSenderId) document.getElementById('fb_messagingSenderId').value=obj.messagingSenderId;
-    if(obj.appId) document.getElementById('fb_appId').value=obj.appId;
+    const lineRe = /(\w+)\s*:\s*["']([\s\S]*?)["']\s*,?\s*$/mg;
+    let m;
+    while((m = lineRe.exec(block)) !== null) {
+      obj[m[1]] = m[2];
+    }
+
+    if(!obj.apiKey) throw new Error('Không tìm thấy trường apiKey');
+
+    // Fill form fields
+    const fields = {
+      fb_apiKey:           obj.apiKey,
+      fb_authDomain:       obj.authDomain,
+      fb_projectId:        obj.projectId,
+      fb_storageBucket:    obj.storageBucket,
+      fb_messagingSenderId:obj.messagingSenderId,
+      fb_appId:            obj.appId
+    };
+    Object.entries(fields).forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if(el && val) el.value = val;
+    });
+
     updateConfigPreview();
-    result.className='test-result ok';
-    result.textContent='✅ Parse thành công! Kiểm tra lại các field và nhấn Lưu & Kết nối.';
-    result.style.display='block';
+    result.className = 'test-result ok';
+    result.textContent = '✅ Parse thành công! Kiểm tra lại các field và nhấn 💾 Lưu & Kết nối.';
+    result.style.display = 'block';
   } catch(e) {
-    result.className='test-result err';
-    result.textContent='❌ Lỗi parse: '+e.message+'. Hãy paste toàn bộ đoạn firebaseConfig = {...}';
-    result.style.display='block';
+    result.className = 'test-result err';
+    result.textContent = '❌ Lỗi parse: ' + e.message + '. Hãy paste toàn bộ đoạn firebaseConfig = {...}';
+    result.style.display = 'block';
   }
 }
 
@@ -1842,6 +1870,8 @@ async function reinitFirebase(cfg){
       hint = ' → Vào Firestore → Rules → set allow read, write: if true → Publish';
     else if(errMsg.includes('network') || errMsg.includes('Failed to fetch') || errMsg.includes('offline'))
       hint = ' → Kiểm tra kết nối mạng';
+    else if(errMsg.includes('app/no-app') || errMsg.includes('no-app'))
+      hint = ' → Firebase SDK chưa sẵn sàng, thử lại sau 1-2 giây';
     showFbTestResult('err', '❌ Lỗi: ' + errMsg + hint);
   }
 }
