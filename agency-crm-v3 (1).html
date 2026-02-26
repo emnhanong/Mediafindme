@@ -1,0 +1,1839 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Agency CRM – Quản lý khách hàng & dự án</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f0f4f9;--surface:#ffffff;--surface2:#f5f7fb;--border:#e2e8f0;
+  --accent:#3b82f6;--accent2:#7c3aed;--green:#10b981;--yellow:#f59e0b;
+  --red:#ef4444;--orange:#f97316;--text:#1e293b;--text2:#64748b;--text3:#94a3b8;
+  --radius:14px;--radius-sm:10px;
+  --shadow:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.06);
+  --shadow-sm:0 1px 3px rgba(0,0,0,.08);
+  --sidebar-w:230px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;}
+
+/* ===== LOGIN ===== */
+#loginScreen{position:fixed;inset:0;background:linear-gradient(135deg,#1e3a5f 0%,#3b82f6 50%,#7c3aed 100%);display:flex;align-items:center;justify-content:center;z-index:9000;padding:20px;}
+.login-box{background:#fff;border-radius:20px;padding:40px 36px;width:100%;max-width:420px;box-shadow:0 24px 80px rgba(0,0,0,.3);}
+.login-logo{text-align:center;font-size:26px;font-weight:900;color:var(--text);margin-bottom:6px;letter-spacing:-.5px;}
+.login-logo span{color:var(--accent);}
+.login-sub{text-align:center;font-size:13px;color:var(--text3);margin-bottom:28px;font-weight:500;}
+.login-field{margin-bottom:16px;}
+.login-field label{display:block;font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;}
+.login-field input{width:100%;padding:12px 15px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:'Nunito',sans-serif;font-size:14px;font-weight:600;color:var(--text);background:var(--surface2);outline:none;transition:all .15s;}
+.login-field input:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(59,130,246,.1);}
+.login-btn{width:100%;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;cursor:pointer;margin-top:8px;transition:all .18s;box-shadow:0 4px 16px rgba(59,130,246,.4);}
+.login-btn:hover{background:#2563eb;transform:translateY(-1px);}
+.login-btn:active{transform:translateY(0);}
+.login-err{color:var(--red);font-size:13px;font-weight:600;text-align:center;margin-top:10px;min-height:20px;}
+.login-loading{text-align:center;color:var(--text3);font-size:13px;margin-top:10px;}
+#syncStatus{position:fixed;bottom:16px;right:16px;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;z-index:8000;display:flex;align-items:center;gap:7px;box-shadow:var(--shadow);transition:all .3s;}
+#syncStatus.syncing{border-color:var(--yellow);color:var(--yellow);}
+#syncStatus.ok{border-color:var(--green);color:var(--green);}
+#syncStatus.err{border-color:var(--red);color:var(--red);}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0;}
+
+/* ===== LAYOUT ===== */
+.app{display:flex;height:100vh;overflow:hidden;}
+
+/* ===== SIDEBAR ===== */
+.sidebar{width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;box-shadow:2px 0 12px rgba(0,0,0,.04);transition:transform .28s ease;}
+.sidebar-logo{padding:20px 18px 16px;font-size:17px;font-weight:900;letter-spacing:-.5px;border-bottom:1px solid var(--border);color:var(--text);display:flex;align-items:center;justify-content:space-between;}
+.sidebar-logo span{color:var(--accent);}
+.sidebar-nav{flex:1;padding:10px;overflow-y:auto;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;color:var(--text2);font-weight:600;transition:all .18s;border-radius:var(--radius-sm);margin-bottom:2px;}
+.nav-item:hover{color:var(--accent);background:#eff6ff;}
+.nav-item.active{color:var(--accent);background:#eff6ff;font-weight:700;box-shadow:var(--shadow-sm);}
+.nav-item svg{width:18px;height:18px;flex-shrink:0;}
+.nav-badge{background:var(--red);color:#fff;border-radius:10px;padding:2px 7px;font-size:10px;font-weight:800;margin-left:auto;}
+.sidebar-footer{padding:12px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--text3);font-weight:500;}
+.sidebar-user{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.sidebar-user-avatar{width:28px;height:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:11px;color:#fff;flex-shrink:0;}
+.logout-btn{width:100%;padding:7px;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);color:var(--red);font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;}
+.logout-btn:hover{background:#fef2f2;border-color:#fecaca;}
+
+/* ===== TOPBAR ===== */
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column;min-width:0;}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:sticky;top:0;z-index:10;box-shadow:var(--shadow-sm);gap:10px;}
+.topbar-left{display:flex;align-items:center;gap:10px;min-width:0;}
+.menu-btn{display:none;background:none;border:none;cursor:pointer;color:var(--text2);padding:4px;border-radius:8px;flex-shrink:0;}
+.menu-btn:hover{background:var(--surface2);}
+.page-title{font-size:16px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.topbar-actions{display:flex;gap:6px;flex-shrink:0;}
+
+/* ===== BUTTONS ===== */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:8px 14px;border-radius:var(--radius-sm);border:none;cursor:pointer;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;transition:all .18s;white-space:nowrap;}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(59,130,246,.3);}.btn-primary:hover{background:#2563eb;transform:translateY(-1px);}
+.btn-ghost{background:var(--surface2);color:var(--text2);border:1.5px solid var(--border);}.btn-ghost:hover{color:var(--accent);border-color:var(--accent);background:#eff6ff;}
+.btn-danger{background:#fef2f2;color:var(--red);border:1.5px solid #fecaca;}.btn-danger:hover{background:#fee2e2;}
+.btn-success{background:#f0fdf4;color:var(--green);border:1.5px solid #bbf7d0;}
+.btn-warning{background:#fffbeb;color:var(--yellow);border:1.5px solid #fde68a;}
+.btn-sm{padding:5px 10px;font-size:12px;}
+
+/* ===== CONTENT ===== */
+.content{padding:20px;flex:1;}
+.page{display:none;}.page.active{display:block;}
+
+/* ===== FILTER BAR ===== */
+.filter-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;box-shadow:var(--shadow-sm);}
+.filter-bar-icon{color:var(--text3);}
+.filter-bar select,.filter-bar-select{padding:7px 10px;font-size:13px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--surface2);font-family:'Nunito',sans-serif;font-weight:600;color:var(--text);outline:none;cursor:pointer;transition:border-color .15s;}
+.filter-bar select:focus,.filter-bar-select:focus{border-color:var(--accent);}
+.filter-label{font-size:12px;color:var(--text3);font-weight:600;padding:3px 0;}
+.filter-reset{margin-left:auto;padding:6px 12px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--surface2);font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;font-family:'Nunito',sans-serif;transition:all .15s;}
+.filter-reset:hover{color:var(--accent);border-color:var(--accent);}
+
+/* ===== STATS ===== */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow);}
+.stat-label{font-size:11px;color:var(--text2);font-weight:700;margin-bottom:7px;text-transform:uppercase;letter-spacing:.6px;}
+.stat-value{font-size:20px;font-weight:900;font-family:'JetBrains Mono',monospace;}
+.stat-value.green{color:var(--green);}.stat-value.blue{color:var(--accent);}.stat-value.yellow{color:var(--yellow);}.stat-value.red{color:var(--red);}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:4px;font-weight:500;}
+
+/* ===== CARD ===== */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:18px;box-shadow:var(--shadow);}
+.card-header{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface2);flex-wrap:wrap;gap:6px;}
+.card-title{font-weight:800;font-size:14px;color:var(--text);}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+table{width:100%;border-collapse:collapse;min-width:500px;}
+thead th{padding:10px 13px;text-align:left;font-size:11px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--surface2);}
+tbody td{padding:11px 13px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text);}
+tbody tr:hover{background:#f8faff;}
+tbody tr:last-child td{border-bottom:none;}
+.mono{font-family:'JetBrains Mono',monospace;font-size:13px;}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;}
+.badge-new{background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;}
+.badge-contact{background:#fffbeb;color:#d97706;border:1px solid #fde68a;}
+.badge-consult{background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;}
+.badge-contract{background:#fff7ed;color:#ea580c;border:1px solid #fed7aa;}
+.badge-dev{background:#eff6ff;color:#3b82f6;border:1px solid #93c5fd;}
+.badge-done{background:#f0fdf4;color:#059669;border:1px solid #bbf7d0;}
+.badge-lost{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}
+.badge-followup{background:#fffbeb;color:#d97706;border:1px solid #fde68a;}
+
+/* ===== PIPELINE ===== */
+.pipeline{display:flex;gap:12px;overflow-x:auto;padding-bottom:10px;-webkit-overflow-scrolling:touch;}
+.pipeline-col{min-width:210px;width:210px;flex-shrink:0;}
+.pipeline-header{padding:10px 13px;border-radius:var(--radius-sm) var(--radius-sm) 0 0;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;display:flex;justify-content:space-between;align-items:center;}
+.pipeline-header .cnt{background:rgba(255,255,255,.3);border-radius:12px;padding:2px 9px;font-size:11px;}
+.pipeline-body{background:var(--surface2);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);padding:7px;min-height:100px;display:flex;flex-direction:column;gap:7px;}
+.pipeline-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:11px 13px;cursor:pointer;transition:all .18s;box-shadow:var(--shadow-sm);}
+.pipeline-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 4px 16px rgba(59,130,246,.15);}
+.pcn{font-weight:700;font-size:13px;margin-bottom:4px;color:var(--text);}
+.pcm{font-size:11px;color:var(--text2);display:flex;gap:6px;flex-wrap:wrap;}
+
+/* ===== FORMS ===== */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.form-grid.cols3{grid-template-columns:1fr 1fr 1fr;}
+.form-group{display:flex;flex-direction:column;gap:5px;}
+.form-group.full{grid-column:1/-1;}
+label{font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;}
+input,select,textarea{background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;color:var(--text);font-family:'Nunito',sans-serif;font-size:13px;font-weight:600;width:100%;outline:none;transition:all .15s;}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(59,130,246,.1);}
+textarea{resize:vertical;min-height:65px;}
+.money-wrap{position:relative;}
+.money-hint{font-size:11px;color:var(--green);font-family:'JetBrains Mono',monospace;margin-top:3px;min-height:16px;font-weight:600;}
+
+/* ===== MODAL ===== */
+.modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:100;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;backdrop-filter:blur(3px);padding:16px;}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:700px;max-width:100%;max-height:92vh;overflow-y:auto;transform:translateY(16px);transition:transform .2s;box-shadow:0 20px 60px rgba(0,0,0,.2);}
+.modal-overlay.open .modal{transform:translateY(0);}
+.modal-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--surface2);position:sticky;top:0;z-index:1;}
+.modal-title{font-weight:800;font-size:15px;color:var(--text);}
+.modal-close{background:none;border:none;color:var(--text2);cursor:pointer;font-size:22px;line-height:1;padding:2px 6px;border-radius:8px;}
+.modal-close:hover{color:var(--text);background:var(--border);}
+.modal-body{padding:20px;}
+.modal-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;background:var(--surface2);position:sticky;bottom:0;}
+
+/* ===== ALERT ===== */
+.alert{padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;font-size:13px;font-weight:600;}
+.alert-warning{background:#fffbeb;border:1.5px solid #fde68a;color:#92400e;}
+.alert-info{background:#eff6ff;border:1.5px solid #bfdbfe;color:#1d4ed8;}
+
+/* ===== FOLLOW-UP ===== */
+.fu-item{background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;gap:10px;}
+.fu-item.overdue{border-color:#fecaca;background:#fef2f2;}
+.fu-item.today{border-color:#fde68a;background:#fffbeb;}
+.fu-left{flex:1;min-width:0;}
+.fu-name{font-weight:700;font-size:14px;color:var(--text);}
+.fu-meta{font-size:12px;color:var(--text2);margin-top:2px;}
+.fu-date{font-size:12px;color:var(--text3);margin-top:4px;font-family:'JetBrains Mono',monospace;}
+
+/* ===== SEARCH ===== */
+.search-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+.search-input{flex:1;min-width:160px;max-width:300px;}
+.filter-select{width:155px;}
+
+/* ===== TABS ===== */
+.tabs{display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:18px;overflow-x:auto;}
+.tab{padding:9px 18px;cursor:pointer;font-weight:700;font-size:13px;color:var(--text2);border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s;white-space:nowrap;}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.tab:hover:not(.active){color:var(--text);}
+
+/* ===== MISC ===== */
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+.profit-bar{height:5px;background:var(--border);border-radius:3px;margin-top:6px;overflow:hidden;}
+.profit-fill{height:100%;border-radius:3px;background:var(--green);transition:width .4s;}
+.inline-actions{display:flex;gap:5px;flex-wrap:wrap;}
+.tag{display:inline-block;padding:3px 7px;border-radius:6px;font-size:11px;font-weight:700;background:#f1f5f9;color:var(--text2);border:1px solid var(--border);}
+.loin{font-family:'JetBrains Mono',monospace;font-weight:700;}
+.loin.pos{color:var(--green);}.loin.neg{color:var(--red);}
+
+/* ===== TOAST ===== */
+#toastCont{position:fixed;top:16px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;max-width:calc(100vw - 32px);}
+.toast{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px 16px;min-width:280px;max-width:380px;box-shadow:0 8px 32px rgba(0,0,0,.15);animation:tIn .3s ease;pointer-events:all;cursor:pointer;}
+.toast.urgent{border-left:4px solid var(--red);}
+.toast.info{border-left:4px solid var(--accent);}
+.t-title{font-weight:800;font-size:13px;margin-bottom:3px;color:var(--text);}
+.t-body{font-size:12px;color:var(--text2);font-weight:500;}
+.t-time{font-size:11px;color:var(--text3);margin-top:3px;font-family:'JetBrains Mono',monospace;}
+@keyframes tIn{from{opacity:0;transform:translateX(20px);}to{opacity:1;transform:translateX(0);}}
+@keyframes tOut{to{opacity:0;transform:translateX(20px);}}
+
+/* ===== SALES ===== */
+.sales-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px;}
+.sales-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);}
+.sales-name{font-weight:800;font-size:14px;margin-bottom:6px;display:flex;align-items:center;gap:7px;color:var(--text);flex-wrap:wrap;}
+.s-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;color:#fff;flex-shrink:0;}
+.rnk{color:#fff;border-radius:12px;padding:2px 8px;font-size:11px;font-weight:800;}
+.rnk1{background:linear-gradient(135deg,#f59e0b,#f97316);}
+.rnk2{background:linear-gradient(135deg,#94a3b8,#64748b);}
+.rnk3{background:linear-gradient(135deg,#cd7f32,#8b4513);}
+
+/* ===== SETTINGS ===== */
+.settings-section{margin-bottom:24px;}
+.settings-section-title{font-size:13px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.settings-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;box-shadow:var(--shadow);margin-bottom:14px;}
+.fb-status-bar{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:700;margin-bottom:18px;}
+.fb-status-bar.connected{background:#f0fdf4;border:1.5px solid #bbf7d0;color:#059669;}
+.fb-status-bar.disconnected{background:#fef2f2;border:1.5px solid #fecaca;color:#dc2626;}
+.fb-status-bar.unknown{background:#f8faff;border:1.5px solid var(--border);color:var(--text2);}
+.fb-dot{width:9px;height:9px;border-radius:50%;background:currentColor;flex-shrink:0;}
+.fb-field-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+.fb-field-grid .full{grid-column:1/-1;}
+.step-list{counter-reset:step;list-style:none;display:flex;flex-direction:column;gap:12px;}
+.step-item{display:flex;gap:12px;align-items:flex-start;}
+.step-num{width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;flex-shrink:0;margin-top:1px;}
+.step-content{flex:1;}
+.step-title{font-weight:700;font-size:13px;color:var(--text);margin-bottom:3px;}
+.step-desc{font-size:12px;color:var(--text2);line-height:1.6;}
+.step-desc code{background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent2);}
+.step-link{display:inline-flex;align-items:center;gap:5px;color:var(--accent);font-size:12px;font-weight:700;text-decoration:none;margin-top:4px;}
+.step-link:hover{text-decoration:underline;}
+.config-preview{background:#1e293b;border-radius:var(--radius-sm);padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#e2e8f0;line-height:1.7;overflow-x:auto;margin-top:10px;}
+.config-preview .key{color:#7dd3fc;}.config-preview .val{color:#86efac;}.config-preview .punc{color:#94a3b8;}
+.btn-firebase{background:linear-gradient(135deg,#f97316,#ef4444);color:#fff;box-shadow:0 2px 10px rgba(249,115,22,.4);border:none;}
+.btn-firebase:hover{opacity:.92;transform:translateY(-1px);}
+.test-result{margin-top:12px;padding:10px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;display:none;}
+.test-result.ok{background:#f0fdf4;border:1.5px solid #bbf7d0;color:#059669;display:block;}
+.test-result.err{background:#fef2f2;border:1.5px solid #fecaca;color:#dc2626;display:block;}
+.rules-code{background:#1e293b;border-radius:var(--radius-sm);padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#e2e8f0;line-height:1.7;overflow-x:auto;margin-top:8px;position:relative;}
+.copy-btn{position:absolute;top:8px;right:8px;background:#334155;border:none;color:#94a3b8;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif;}
+.copy-btn:hover{background:#475569;color:#fff;}
+@media(max-width:768px){
+  .fb-field-grid{grid-template-columns:1fr;}
+  .fb-field-grid .full{grid-column:1;}
+  .settings-card{padding:14px 16px;}
+}
+
+/* ===== MOBILE OVERLAY ===== */
+#sidebarOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:49;backdrop-filter:blur(2px);}
+
+/* ===== MOBILE BOTTOM NAV ===== */
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);z-index:50;box-shadow:0 -4px 20px rgba(0,0,0,.08);}
+.mobile-nav-inner{display:flex;justify-content:space-around;padding:6px 0 env(safe-area-inset-bottom,6px);}
+.mnav-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 10px;cursor:pointer;color:var(--text3);font-size:10px;font-weight:700;border-radius:8px;transition:all .15s;flex:1;position:relative;}
+.mnav-item.active{color:var(--accent);}
+.mnav-item svg{width:20px;height:20px;}
+.mnav-badge{position:absolute;top:4px;right:calc(50% - 16px);background:var(--red);color:#fff;border-radius:8px;padding:1px 5px;font-size:9px;font-weight:800;}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:900px){
+  .stats-grid{grid-template-columns:repeat(2,1fr);}
+  .sales-grid{grid-template-columns:repeat(2,1fr);}
+  .form-grid.cols3{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:768px){
+  :root{--sidebar-w:260px;}
+  .sidebar{position:fixed;top:0;left:0;height:100%;z-index:50;transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0);}
+  #sidebarOverlay{display:block;opacity:0;pointer-events:none;transition:opacity .25s;}
+  #sidebarOverlay.open{opacity:1;pointer-events:all;}
+  .menu-btn{display:flex;}
+  .main{width:100%;}
+  .content{padding:14px 12px 80px;}
+  .topbar{padding:10px 14px;}
+  .page-title{font-size:15px;}
+  .topbar-actions .btn span{display:none;}
+  .topbar-actions .btn{padding:7px 10px;}
+  .stats-grid{grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px;}
+  .stat-card{padding:14px 15px;}
+  .stat-value{font-size:17px;}
+  .sales-grid{grid-template-columns:1fr;}
+  .filter-bar{padding:8px 12px;gap:6px;}
+  .filter-bar select{font-size:12px;padding:6px 8px;}
+  .modal-overlay{padding:10px;}
+  .modal-body{padding:14px;}
+  .form-grid{grid-template-columns:1fr;}
+  .form-grid.cols3{grid-template-columns:1fr;}
+  .form-group.full{grid-column:1;}
+  table{min-width:420px;}
+  .mobile-nav{display:block;}
+  .sidebar-footer{display:none;}
+}
+@media(max-width:480px){
+  .stats-grid{grid-template-columns:repeat(2,1fr);gap:8px;}
+  .stat-card{padding:12px 13px;}
+  .stat-value{font-size:15px;}
+  .stat-label{font-size:10px;}
+  .card-header{padding:10px 14px;}
+  .search-bar{gap:6px;}
+  .search-input{min-width:130px;}
+  .filter-select{width:130px;}
+  .btn-sm{padding:5px 8px;font-size:11px;}
+  #toastCont{top:10px;right:10px;}
+  .toast{min-width:240px;}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">Agency<span>CRM</span></div>
+    <div class="login-sub">Hệ thống quản lý khách hàng & dự án</div>
+    <div class="login-field">
+      <label>Tài khoản</label>
+      <input type="text" id="lgUser" placeholder="Nhập tài khoản" autocomplete="username">
+    </div>
+    <div class="login-field">
+      <label>Mật khẩu</label>
+      <input type="password" id="lgPass" placeholder="Nhập mật khẩu" autocomplete="current-password">
+    </div>
+    <button class="login-btn" onclick="doLogin()" id="lgBtn">🔐 Đăng nhập</button>
+    <div class="login-err" id="lgErr"></div>
+    <div class="login-loading" id="lgLoading" style="display:none">⏳ Đang kết nối Firebase...</div>
+  </div>
+</div>
+
+<!-- SYNC STATUS -->
+<div id="syncStatus" style="display:none">
+  <div class="sync-dot"></div>
+  <span id="syncTxt">Đồng bộ...</span>
+</div>
+
+<!-- SIDEBAR OVERLAY (mobile) -->
+<div id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<div id="toastCont"></div>
+
+<div class="app" id="appRoot" style="display:none">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      Agency<span>CRM</span>
+      <button class="menu-btn" onclick="closeSidebar()" style="display:flex">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-item active" onclick="nav('dashboard');closeSidebar()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Tổng quan
+      </div>
+      <div class="nav-item" onclick="nav('pipeline');closeSidebar()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3H7L3 9l9 12 9-12-4-6z"/></svg>Pipeline KH
+      </div>
+      <div class="nav-item" onclick="nav('customers');closeSidebar()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>Khách hàng
+      </div>
+      <div class="nav-item" onclick="nav('projects');closeSidebar()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>Dự án &amp; Tài chính
+      </div>
+      <div class="nav-item" id="navFU" onclick="nav('followup');closeSidebar()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Lịch Follow-up
+        <span class="nav-badge" id="fuBadge" style="display:none">0</span>
+      </div>
+      <div class="nav-item" onclick="nav('sales');closeSidebar()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Hiệu suất Sales
+      </div>
+      <div class="nav-item" onclick="nav('debt');closeSidebar()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Công nợ
+      </div>
+      <div style="height:1px;background:var(--border);margin:8px 4px;"></div>
+      <div class="nav-item" onclick="nav('settings');closeSidebar()" id="navSettings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Cài đặt
+        <span id="fbSetupBadge" style="display:none;background:var(--red);color:#fff;border-radius:10px;padding:2px 7px;font-size:10px;font-weight:800;margin-left:auto">!</span>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-user-avatar">AD</div>
+        <div><div style="font-weight:700;font-size:12px;color:var(--text)">Admin</div><div style="font-size:11px;color:var(--text3)">Quản trị viên</div></div>
+      </div>
+      <button class="logout-btn" onclick="doLogout()">🚪 Đăng xuất</button>
+      <div style="margin-top:8px;text-align:center">© 2025 AgencyCRM v3.0</div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="menu-btn" onclick="openSidebar()">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+        </button>
+        <div class="page-title" id="pgTitle">Tổng quan</div>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn btn-ghost btn-sm" onclick="openM('mAddCust')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          <span>Thêm KH</span>
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="openM('mAddProj')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          <span>Thêm DA</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- DASHBOARD -->
+      <div id="page-dashboard" class="page active">
+        <div class="filter-bar">
+          <svg class="filter-bar-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          <select id="dashPeriod" onchange="renderDash()">
+            <option value="all">Tất cả</option>
+            <option value="month" selected>Tháng này</option>
+            <option value="lastmonth">Tháng trước</option>
+            <option value="quarter">Quý này</option>
+            <option value="lastquarter">Quý trước</option>
+            <option value="year">Năm nay</option>
+            <option value="lastyear">Năm ngoái</option>
+          </select>
+          <select id="dashSales" onchange="renderDash()"><option value="">👥 Tất cả Sales</option></select>
+          <span id="dashFilterLabel" class="filter-label"></span>
+          <button class="filter-reset" onclick="document.getElementById('dashPeriod').value='all';document.getElementById('dashSales').value='';renderDash()">↺ Reset</button>
+        </div>
+        <div class="stats-grid" id="statsGrid"></div>
+        <div id="dashSalesBreak" style="display:none;margin-bottom:18px">
+          <div class="card">
+            <div class="card-header"><div class="card-title">📊 Hiệu suất Sales trong kỳ</div><span id="dashSalesBreakLabel" style="font-size:12px;color:var(--text3)"></span></div>
+            <div class="table-wrap"><table><thead><tr><th>Sales</th><th>Dự án</th><th>Doanh thu</th><th>Tổng HĐ</th><th>Chi phí</th><th>Lợi nhuận</th><th>Công nợ</th><th>Tỷ lệ chốt</th></tr></thead><tbody id="dashSalesTb"></tbody></table></div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px" class="dash-grid">
+          <div class="card">
+            <div class="card-header"><div class="card-title" id="dashProjTitle">Dự án trong kỳ</div><span id="dashProjCnt" style="font-size:12px;color:var(--text3)"></span></div>
+            <div class="table-wrap"><table><thead><tr><th>Dự án</th><th>Khách hàng</th><th>Sales</th><th>Doanh thu</th><th>Lợi nhuận</th><th>Nợ</th><th>TT</th></tr></thead><tbody id="dashProjTb"></tbody></table></div>
+          </div>
+          <div>
+            <div class="card" style="margin-bottom:14px"><div class="card-header"><div class="card-title">🔔 Follow-up hôm nay &amp; quá hạn</div></div><div style="padding:10px" id="dashFU"></div></div>
+            <div class="card"><div class="card-header"><div class="card-title">📊 Pipeline tóm tắt</div></div><div style="padding:12px" id="dashPL"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PIPELINE -->
+      <div id="page-pipeline" class="page">
+        <div class="alert alert-info">💡 Nhấn vào card để chỉnh sửa và cập nhật trạng thái</div>
+        <div class="pipeline" id="plBoard"></div>
+      </div>
+
+      <!-- CUSTOMERS -->
+      <div id="page-customers" class="page">
+        <div class="search-bar">
+          <input class="search-input" type="text" placeholder="🔍 Tìm khách hàng..." id="srchCust" oninput="renderCust()">
+          <select class="filter-select" id="filtSt" onchange="renderCust()">
+            <option value="">Tất cả TT</option>
+            <option value="new">Lead mới</option><option value="contact">Đã liên hệ</option>
+            <option value="consult">Tư vấn</option><option value="contract">Hợp đồng</option>
+            <option value="dev">Đang dev</option><option value="done">Đã chốt</option>
+            <option value="followup">Follow-up</option><option value="lost">Không chốt</option>
+          </select>
+          <select class="filter-select" id="filtSrc" onchange="renderCust()">
+            <option value="">Tất cả nguồn</option>
+            <option value="facebook">Facebook</option><option value="personal">Cá nhân</option>
+            <option value="referral">Giới thiệu</option><option value="other">Khác</option>
+          </select>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Danh sách khách hàng</div><span id="custCnt" style="font-size:12px;color:var(--text3)"></span></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>#</th><th>Tên KH</th><th>SĐT</th><th>Nguồn</th><th>Dịch vụ</th><th>Sales</th><th>Trạng thái</th><th>VAT</th><th>Ngày</th><th>Ghi chú</th><th>Thao tác</th></tr></thead>
+            <tbody id="custTb"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- PROJECTS -->
+      <div id="page-projects" class="page">
+        <div class="tabs">
+          <div class="tab active" onclick="swTab('tabProj','tabSum',this)">📋 Danh sách dự án</div>
+          <div class="tab" onclick="swTab('tabSum','tabProj',this)">📊 Tổng hợp tài chính</div>
+        </div>
+        <div id="tabProj">
+          <div class="card"><div class="card-header"><div class="card-title">Quản lý dự án &amp; tài chính</div></div>
+            <div class="table-wrap"><table>
+              <thead><tr><th>Dự án</th><th>Khách hàng</th><th>Sales</th><th>CK1</th><th>CK2</th><th>Tổng CK</th><th>Hosting</th><th>Domain</th><th>CP khác</th><th>Lợi nhuận</th><th>Ghi chú</th><th>Thao tác</th></tr></thead>
+              <tbody id="projTb"></tbody>
+            </table></div>
+          </div>
+        </div>
+        <div id="tabSum" style="display:none">
+          <div class="stats-grid" id="finStats"></div>
+          <div class="card"><div class="card-header"><div class="card-title">Chi tiết theo dự án</div></div><div style="padding:14px" id="finChart"></div></div>
+        </div>
+      </div>
+
+      <!-- FOLLOW-UP -->
+      <div id="page-followup" class="page">
+        <div class="alert alert-warning">⏰ Thông báo sẽ pop-up khi đến đúng giờ hẹn. Khách chốt / không chốt sẽ tự rời khỏi danh sách.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px" class="fu-grid">
+          <div class="card"><div class="card-header"><div class="card-title">🔴 Quá hạn / Chưa lịch</div></div><div style="padding:10px" id="fuOverdue"></div></div>
+          <div class="card"><div class="card-header"><div class="card-title">🟡 Hôm nay &amp; sắp tới</div></div><div style="padding:10px" id="fuUpcoming"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">📅 Tất cả lịch follow-up</div></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Khách hàng</th><th>SĐT</th><th>Sales</th><th>TT</th><th>Ngày &amp; Giờ FU</th><th>Ghi chú</th><th>Thao tác</th></tr></thead>
+            <tbody id="fuTb"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- SALES -->
+      <div id="page-sales" class="page">
+        <div class="search-bar">
+          <select class="filter-select" id="slPeriod" onchange="renderSales()">
+            <option value="month">Tháng này</option>
+            <option value="lastmonth">Tháng trước</option>
+            <option value="quarter">Quý này</option>
+            <option value="year">Năm nay</option>
+            <option value="all">Tất cả</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" onclick="openM('mAddSales')">+ Thêm Sales</button>
+        </div>
+        <div class="sales-grid" id="slCards"></div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">📊 Bảng xếp hạng doanh số</div></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Hạng</th><th>Sales</th><th>Dự án</th><th>Doanh thu</th><th>Tổng HĐ</th><th>Lợi nhuận</th><th>Tỷ lệ chốt</th><th>Thao tác</th></tr></thead>
+            <tbody id="slTb"></tbody>
+          </table></div>
+        </div>
+        <div class="card"><div class="card-header"><div class="card-title">📋 Dự án theo từng sales</div></div><div style="padding:14px" id="slProjList"></div></div>
+      </div>
+
+      <!-- DEBT -->
+      <div id="page-debt" class="page">
+        <div class="filter-bar">
+          <svg class="filter-bar-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          <select id="debtPeriod" onchange="renderDebt()">
+            <option value="all" selected>Tất cả</option>
+            <option value="month">Tháng này</option>
+            <option value="lastmonth">Tháng trước</option>
+            <option value="quarter">Quý này</option>
+            <option value="lastquarter">Quý trước</option>
+            <option value="year">Năm nay</option>
+            <option value="lastyear">Năm ngoái</option>
+          </select>
+          <select id="debtSales" onchange="renderDebt()"><option value="">👥 Tất cả Sales</option></select>
+          <select id="debtStatus" onchange="renderDebt()">
+            <option value="">Tất cả</option>
+            <option value="debt">Còn nợ</option>
+            <option value="paid">Đã TT</option>
+          </select>
+          <span id="debtFilterLabel" class="filter-label"></span>
+          <button class="filter-reset" onclick="document.getElementById('debtPeriod').value='all';document.getElementById('debtSales').value='';document.getElementById('debtStatus').value='';renderDebt()">↺ Reset</button>
+        </div>
+        <div class="stats-grid" id="debtStats"></div>
+        <div id="debtSalesBreak" style="margin-bottom:18px">
+          <div class="card">
+            <div class="card-header"><div class="card-title">👥 Công nợ theo từng Sales</div><span id="debtSalesBreakLabel" style="font-size:12px;color:var(--text3)"></span></div>
+            <div class="table-wrap"><table><thead><tr><th>Sales</th><th>Số DA</th><th>Tổng HĐ</th><th>Đã thu</th><th>Còn nợ</th><th>DA còn nợ</th><th>% Thu hồi</th></tr></thead><tbody id="debtSalesTb"></tbody></table></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title" id="debtTableTitle">Chi tiết công nợ</div><span id="debtTableCnt" style="font-size:12px;color:var(--text3)"></span></div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Khách hàng</th><th>Dự án</th><th>Sales</th><th>Tổng HĐ</th><th>Đã TT</th><th>Còn nợ</th><th>Hạn TT</th><th>TT</th><th>Thao tác</th></tr></thead>
+            <tbody id="debtTb"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div id="page-settings" class="page">
+
+        <!-- Firebase Status Bar -->
+        <div id="fbStatusBar" class="fb-status-bar unknown">
+          <div class="fb-dot"></div>
+          <span id="fbStatusTxt">Đang kiểm tra kết nối Firebase...</span>
+          <button onclick="testFbConnection()" style="margin-left:auto;padding:5px 12px;border-radius:8px;border:1.5px solid currentColor;background:transparent;color:inherit;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;cursor:pointer">🔄 Kiểm tra</button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:18px;align-items:start" id="settingsGrid">
+
+          <!-- LEFT: Config Form -->
+          <div>
+            <div class="settings-section">
+              <div class="settings-section-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M12 8v4l3 3"/></svg>
+                🔥 Cấu hình Firebase
+              </div>
+              <div class="settings-card">
+                <div style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6;">
+                  Nhập thông tin Firebase project của bạn để đồng bộ dữ liệu realtime giữa tất cả thiết bị.
+                  <a href="https://console.firebase.google.com" target="_blank" class="step-link" style="margin-left:6px">Mở Firebase Console ↗</a>
+                </div>
+                <div class="fb-field-grid">
+                  <div class="form-group full">
+                    <label>🔑 API Key</label>
+                    <input id="fb_apiKey" placeholder="AIzaSy..." style="font-family:'JetBrains Mono',monospace;font-size:12px;">
+                  </div>
+                  <div class="form-group">
+                    <label>🌐 Auth Domain</label>
+                    <input id="fb_authDomain" placeholder="your-app.firebaseapp.com" style="font-family:'JetBrains Mono',monospace;font-size:12px;">
+                  </div>
+                  <div class="form-group">
+                    <label>📁 Project ID</label>
+                    <input id="fb_projectId" placeholder="your-project-id" style="font-family:'JetBrains Mono',monospace;font-size:12px;">
+                  </div>
+                  <div class="form-group">
+                    <label>🪣 Storage Bucket</label>
+                    <input id="fb_storageBucket" placeholder="your-app.appspot.com" style="font-family:'JetBrains Mono',monospace;font-size:12px;">
+                  </div>
+                  <div class="form-group">
+                    <label>📨 Messaging Sender ID</label>
+                    <input id="fb_messagingSenderId" placeholder="000000000000" style="font-family:'JetBrains Mono',monospace;font-size:12px;">
+                  </div>
+                  <div class="form-group full">
+                    <label>📱 App ID</label>
+                    <input id="fb_appId" placeholder="1:000000000000:web:abc123" style="font-family:'JetBrains Mono',monospace;font-size:12px;">
+                  </div>
+                </div>
+
+                <!-- Config preview -->
+                <div id="configPreview" style="display:none;margin-bottom:16px;">
+                  <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Preview config</div>
+                  <div class="config-preview" id="configPreviewCode"></div>
+                </div>
+
+                <div id="fbTestResult" class="test-result"></div>
+
+                <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">
+                  <button class="btn btn-firebase" onclick="saveFbConfig()" style="flex:1;justify-content:center;min-width:140px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+                    💾 Lưu & Kết nối Firebase
+                  </button>
+                  <button class="btn btn-ghost" onclick="testFbConnection()">🔄 Test kết nối</button>
+                  <button class="btn btn-danger btn-sm" onclick="clearFbConfig()" title="Xóa config, dùng offline">🗑 Xóa config</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Firestore Rules -->
+            <div class="settings-section">
+              <div class="settings-section-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                🛡️ Firestore Security Rules
+              </div>
+              <div class="settings-card">
+                <div style="font-size:13px;color:var(--text2);margin-bottom:10px;line-height:1.6;">Copy rules này vào <strong>Firestore → Rules</strong> để cho phép đọc/ghi dữ liệu:</div>
+                <div class="rules-code" style="position:relative;">
+                  <button class="copy-btn" onclick="copyRules()">📋 Copy</button>
+                  <span style="color:#f472b6">rules_version</span> = <span style="color:#86efac">'2'</span>;<br>
+                  <span style="color:#7dd3fc">service</span> cloud.firestore {<br>
+                  &nbsp;&nbsp;<span style="color:#7dd3fc">match</span> /databases/{database}/documents {<br>
+                  &nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#7dd3fc">match</span> /crm/{doc} {<br>
+                  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#fbbf24">allow</span> read, write: <span style="color:#7dd3fc">if</span> <span style="color:#86efac">true</span>;<br>
+                  &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+                  &nbsp;&nbsp;}<br>
+                  }
+                </div>
+                <div style="font-size:11px;color:var(--text3);margin-top:8px;">⚠️ Rules này cho phép tất cả đọc/ghi. Phù hợp cho team nội bộ. Không dùng cho dữ liệu nhạy cảm công khai.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT: Hướng dẫn -->
+          <div>
+            <div class="settings-section">
+              <div class="settings-section-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                📖 Hướng dẫn thiết lập
+              </div>
+              <div class="settings-card">
+                <ol class="step-list">
+                  <li class="step-item">
+                    <div class="step-num">1</div>
+                    <div class="step-content">
+                      <div class="step-title">Tạo Firebase Project</div>
+                      <div class="step-desc">Truy cập <a href="https://console.firebase.google.com" target="_blank" class="step-link">console.firebase.google.com ↗</a> → Click <code>Add project</code> → Đặt tên → Tắt Google Analytics → <code>Create project</code></div>
+                    </div>
+                  </li>
+                  <li class="step-item">
+                    <div class="step-num">2</div>
+                    <div class="step-content">
+                      <div class="step-title">Đăng ký Web App</div>
+                      <div class="step-desc">Trong project → Click biểu tượng <code>&lt;/&gt;</code> (Web) → Đặt tên app → <code>Register app</code> → Copy toàn bộ <code>firebaseConfig</code></div>
+                    </div>
+                  </li>
+                  <li class="step-item">
+                    <div class="step-num">3</div>
+                    <div class="step-content">
+                      <div class="step-title">Tạo Firestore Database</div>
+                      <div class="step-desc">Sidebar → <code>Build</code> → <code>Firestore Database</code> → <code>Create database</code> → Chọn <code>Start in test mode</code> → Chọn region → <code>Enable</code></div>
+                    </div>
+                  </li>
+                  <li class="step-item">
+                    <div class="step-num">4</div>
+                    <div class="step-content">
+                      <div class="step-title">Cập nhật Security Rules</div>
+                      <div class="step-desc">Trong Firestore → Tab <code>Rules</code> → Xóa nội dung cũ → Paste rules ở cột trái → <code>Publish</code></div>
+                    </div>
+                  </li>
+                  <li class="step-item">
+                    <div class="step-num">5</div>
+                    <div class="step-content">
+                      <div class="step-title">Dán config vào đây</div>
+                      <div class="step-desc">Paste các giá trị từ <code>firebaseConfig</code> vào form bên trái → <code>💾 Lưu & Kết nối</code> → Kiểm tra trạng thái ✅</div>
+                    </div>
+                  </li>
+                </ol>
+              </div>
+            </div>
+
+            <!-- Quick paste box -->
+            <div class="settings-section">
+              <div class="settings-section-title">⚡ Dán nhanh từ Firebase</div>
+              <div class="settings-card">
+                <div style="font-size:13px;color:var(--text2);margin-bottom:10px;line-height:1.6;">Paste toàn bộ object <code style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-family:'JetBrains Mono',monospace;font-size:11px;">firebaseConfig = {...}</code> vào đây rồi nhấn Parse:</div>
+                <textarea id="fbPasteBox" placeholder='const firebaseConfig = {
+  apiKey: "AIzaSy...",
+  authDomain: "your-app.firebaseapp.com",
+  projectId: "your-project-id",
+  storageBucket: "your-app.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123:web:abc"
+};' style="min-height:130px;font-family:'JetBrains Mono',monospace;font-size:11px;background:#1e293b;color:#e2e8f0;border-color:#334155;resize:vertical;"></textarea>
+                <button class="btn btn-primary" onclick="parseFbPaste()" style="width:100%;justify-content:center;margin-top:10px;">⚡ Parse & Điền tự động</button>
+                <div id="parseResult" class="test-result"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /page-settings -->
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- MOBILE BOTTOM NAV -->
+<nav class="mobile-nav" id="mobileNav" style="display:none">
+  <div class="mobile-nav-inner">
+    <div class="mnav-item active" onclick="nav('dashboard')" data-pg="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <span>Tổng quan</span>
+    </div>
+    <div class="mnav-item" onclick="nav('customers')" data-pg="customers">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      <span>Khách hàng</span>
+    </div>
+    <div class="mnav-item" onclick="nav('projects')" data-pg="projects">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>
+      <span>Dự án</span>
+    </div>
+    <div class="mnav-item" onclick="nav('followup')" data-pg="followup">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      <span>Follow-up</span>
+      <span class="mnav-badge" id="mnavBadge" style="display:none">0</span>
+    </div>
+    <div class="mnav-item" onclick="nav('debt')" data-pg="debt">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+      <span>Công nợ</span>
+    </div>
+  </div>
+</nav>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="mAddCust">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">➕ Thêm khách hàng mới</div><button class="modal-close" onclick="closeM('mAddCust')">×</button></div>
+    <div class="modal-body"><div class="form-grid">
+      <div class="form-group"><label>Tên khách hàng *</label><input id="cName" placeholder="Nguyễn Văn A"></div>
+      <div class="form-group"><label>SĐT / Zalo *</label><input id="cPhone" placeholder="0912 345 678"></div>
+      <div class="form-group"><label>Email</label><input id="cEmail" type="email" placeholder="example@gmail.com"></div>
+      <div class="form-group"><label>Dịch vụ quan tâm</label><input id="cService" placeholder="Website bán hàng..."></div>
+      <div class="form-group"><label>Phụ trách Sales</label><select id="cSales"><option value="">-- Chọn --</option></select></div>
+      <div class="form-group"><label>Nguồn khách</label>
+        <select id="cSource"><option value="facebook">Facebook Ads</option><option value="personal">Quan hệ cá nhân</option><option value="referral">Giới thiệu</option><option value="other">Khác</option></select>
+      </div>
+      <div class="form-group"><label>Trạng thái</label>
+        <select id="cStatus"><option value="new">Lead mới</option><option value="contact">Đã liên hệ</option><option value="consult">Đang tư vấn</option><option value="contract">Lên hợp đồng</option><option value="dev">Đang dev</option><option value="done">Đã chốt</option><option value="followup">Cần follow-up</option><option value="lost">Không chốt</option></select>
+      </div>
+      <div class="form-group"><label>VAT hóa đơn?</label><select id="cVat"><option value="no">Không</option><option value="yes">Có</option></select></div>
+      <div class="form-group"><label>📅 Ngày follow-up</label><input id="cFDate" type="date"></div>
+      <div class="form-group"><label>⏰ Giờ follow-up</label><input id="cFTime" type="time"></div>
+      <div class="form-group full"><label>Ghi chú</label><textarea id="cNote" placeholder="Ghi chú thêm..."></textarea></div>
+    </div></div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('mAddCust')">Huỷ</button><button class="btn btn-primary" onclick="saveCust()">💾 Lưu</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="mAddProj">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">➕ Thêm dự án mới</div><button class="modal-close" onclick="closeM('mAddProj')">×</button></div>
+    <div class="modal-body"><div class="form-grid cols3">
+      <div class="form-group full"><label>Tên dự án *</label><input id="pName" placeholder="Website bán hàng Công ty ABC"></div>
+      <div class="form-group"><label>Khách hàng *</label><select id="pCust"><option value="">-- Chọn --</option></select></div>
+      <div class="form-group"><label>Phụ trách Sales</label><select id="pSales"><option value="">-- Chọn --</option></select></div>
+      <div class="form-group"><label>Tổng HĐ (₫)</label><div class="money-wrap"><input id="pTotal" type="text" inputmode="numeric" placeholder="0" oninput="fmtInput(this,'pTotalH')"></div><div class="money-hint" id="pTotalH"></div></div>
+      <div class="form-group"><label>CK lần 1 (₫)</label><div class="money-wrap"><input id="pCk1" type="text" inputmode="numeric" placeholder="0" oninput="fmtInput(this,'pCk1H')"></div><div class="money-hint" id="pCk1H"></div></div>
+      <div class="form-group"><label>CK lần 2 (₫)</label><div class="money-wrap"><input id="pCk2" type="text" inputmode="numeric" placeholder="0" oninput="fmtInput(this,'pCk2H')"></div><div class="money-hint" id="pCk2H"></div></div>
+      <div class="form-group"><label>Chi phí Hosting (₫)</label><div class="money-wrap"><input id="pHost" type="text" inputmode="numeric" placeholder="0" oninput="fmtInput(this,'pHostH')"></div><div class="money-hint" id="pHostH"></div></div>
+      <div class="form-group"><label>Chi phí Domain (₫)</label><div class="money-wrap"><input id="pDom" type="text" inputmode="numeric" placeholder="0" oninput="fmtInput(this,'pDomH')"></div><div class="money-hint" id="pDomH"></div></div>
+      <div class="form-group"><label>CP khác (₫)</label><div class="money-wrap"><input id="pOth" type="text" inputmode="numeric" placeholder="0" oninput="fmtInput(this,'pOthH')"></div><div class="money-hint" id="pOthH"></div></div>
+      <div class="form-group"><label>Ngày bắt đầu</label><input id="pStart" type="date"></div>
+      <div class="form-group"><label>Ngày bàn giao</label><input id="pEnd" type="date"></div>
+      <div class="form-group"><label>Trạng thái</label><select id="pSt"><option value="pending">Chờ xử lý</option><option value="inprogress">Đang triển khai</option><option value="done">Đã bàn giao</option><option value="warranty">Bảo hành</option></select></div>
+      <div class="form-group full"><label>Ghi chú</label><textarea id="pNote"></textarea></div>
+    </div></div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('mAddProj')">Huỷ</button><button class="btn btn-primary" onclick="saveProj()">💾 Lưu dự án</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="mEditCust">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">✏️ Chỉnh sửa khách hàng</div><button class="modal-close" onclick="closeM('mEditCust')">×</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="ecId">
+      <div class="form-grid">
+        <div class="form-group"><label>Tên KH *</label><input id="ecName"></div>
+        <div class="form-group"><label>SĐT / Zalo</label><input id="ecPhone"></div>
+        <div class="form-group"><label>Email</label><input id="ecEmail" type="email"></div>
+        <div class="form-group"><label>Dịch vụ</label><input id="ecService"></div>
+        <div class="form-group"><label>Sales</label><select id="ecSales"><option value="">-- Chọn --</option></select></div>
+        <div class="form-group"><label>Nguồn</label><select id="ecSrc"><option value="facebook">Facebook Ads</option><option value="personal">Cá nhân</option><option value="referral">Giới thiệu</option><option value="other">Khác</option></select></div>
+        <div class="form-group"><label>Trạng thái</label>
+          <select id="ecSt"><option value="new">Lead mới</option><option value="contact">Đã liên hệ</option><option value="consult">Tư vấn</option><option value="contract">Hợp đồng</option><option value="dev">Đang dev</option><option value="done">Đã chốt</option><option value="followup">Follow-up</option><option value="lost">Không chốt</option></select>
+        </div>
+        <div class="form-group"><label>VAT</label><select id="ecVat"><option value="no">Không</option><option value="yes">Có</option></select></div>
+        <div class="form-group"><label>📅 Ngày FU</label><input id="ecFDate" type="date"></div>
+        <div class="form-group"><label>⏰ Giờ FU</label><input id="ecFTime" type="time"></div>
+        <div class="form-group full"><label>Ghi chú</label><textarea id="ecNote"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('mEditCust')">Huỷ</button><button class="btn btn-primary" onclick="updCust()">💾 Cập nhật</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="mAddSales">
+  <div class="modal" style="width:440px">
+    <div class="modal-header"><div class="modal-title">👤 Thêm thành viên Sales</div><button class="modal-close" onclick="closeM('mAddSales')">×</button></div>
+    <div class="modal-body"><div class="form-grid">
+      <div class="form-group full"><label>Tên Sales *</label><input id="sName" placeholder="Nguyễn Văn Sales"></div>
+      <div class="form-group"><label>SĐT</label><input id="sPhone" placeholder="0912..."></div>
+      <div class="form-group"><label>Email</label><input id="sEmail" type="email"></div>
+      <div class="form-group full"><label>Ghi chú / Khu vực</label><input id="sNote" placeholder="Khu vực, chuyên môn..."></div>
+    </div></div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('mAddSales')">Huỷ</button><button class="btn btn-primary" onclick="saveSales()">💾 Thêm</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="mEditSales">
+  <div class="modal" style="width:440px">
+    <div class="modal-header"><div class="modal-title">✏️ Chỉnh sửa Sales</div><button class="modal-close" onclick="closeM('mEditSales')">×</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="esId">
+      <div class="form-grid">
+        <div class="form-group full"><label>Tên Sales *</label><input id="esName"></div>
+        <div class="form-group"><label>SĐT</label><input id="esPhone"></div>
+        <div class="form-group"><label>Email</label><input id="esEmail" type="email"></div>
+        <div class="form-group full"><label>Ghi chú</label><input id="esNote"></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeM('mEditSales')">Huỷ</button><button class="btn btn-primary" onclick="updSales()">💾 Lưu</button></div>
+  </div>
+</div>
+
+<!-- ==================== SCRIPTS ==================== -->
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, setDoc, onSnapshot, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+// ============================================================
+// 🔥 FIREBASE CONFIG – Thay thế bằng config của bạn tại:
+//    https://console.firebase.google.com → Project Settings → Your apps
+// ============================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyDEMO_REPLACE_WITH_YOUR_KEY",
+  authDomain: "your-project.firebaseapp.com",
+  projectId: "your-project-id",
+  storageBucket: "your-project.appspot.com",
+  messagingSenderId: "000000000000",
+  appId: "1:000000000000:web:abc123"
+};
+// ============================================================
+
+let db = null;
+let fbReady = false;
+
+function showSync(state, txt) {
+  const el = document.getElementById('syncStatus');
+  const t = document.getElementById('syncTxt');
+  if(!el) return;
+  el.style.display = 'flex';
+  el.className = state;
+  t.textContent = txt;
+  if(state === 'ok') setTimeout(() => { el.style.display = 'none'; }, 3000);
+}
+
+async function initFirebase() {
+  try {
+    const app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+    fbReady = true;
+    window._fbDb = db;
+    window._fbReady = true;
+    window._fbSetDoc = setDoc;
+    window._fbDoc = doc;
+    window._fbOnSnapshot = onSnapshot;
+    window._fbCollection = collection;
+    window._fbGetDocs = getDocs;
+    showSync('ok', '✓ Firebase kết nối');
+    // Setup realtime listener after login
+    window._fbSetupListeners = setupListeners;
+    console.log('[Firebase] Connected');
+  } catch(e) {
+    console.warn('[Firebase] Init failed:', e.message);
+    fbReady = false;
+    window._fbReady = false;
+    showSync('err', '⚠ Offline mode');
+  }
+}
+
+function setupListeners() {
+  if(!db) return;
+  // Listen for changes from other devices
+  onSnapshot(doc(db, 'crm', 'data'), (snap) => {
+    if(snap.exists()) {
+      const d = snap.data();
+      if(d.C) { window.C = d.C; }
+      if(d.P) { window.P = d.P; }
+      if(d.S) { window.S = d.S; }
+      // Save to localStorage as cache
+      localStorage.setItem('crm_c', JSON.stringify(window.C));
+      localStorage.setItem('crm_p', JSON.stringify(window.P));
+      localStorage.setItem('crm_s', JSON.stringify(window.S));
+      if(window._crmReady) {
+        window.updBadge();
+        window.render(window.curPg());
+        showSync('ok', '✓ Đã đồng bộ');
+      }
+    }
+  }, (err) => {
+    console.warn('[Firebase] Listener error:', err);
+    showSync('err', '⚠ Lỗi đồng bộ');
+  });
+}
+
+window._fbSave = async function(C, P, S) {
+  if(!db) return;
+  showSync('syncing', '↑ Đang lưu...');
+  try {
+    await setDoc(doc(db, 'crm', 'data'), { C, P, S, updatedAt: Date.now() });
+    showSync('ok', '✓ Đã lưu lên cloud');
+  } catch(e) {
+    console.warn('[Firebase] Save failed:', e);
+    showSync('err', '⚠ Lưu thất bại');
+  }
+};
+
+initFirebase();
+</script>
+
+<script>
+// ===== LOGIN =====
+const ADMIN_USER = 'admin';
+const ADMIN_PASS = 'Mediafindme';
+
+function doLogin() {
+  const u = document.getElementById('lgUser').value.trim();
+  const p = document.getElementById('lgPass').value;
+  const err = document.getElementById('lgErr');
+  if(!u || !p) { err.textContent = '⚠ Vui lòng nhập đầy đủ thông tin'; return; }
+  if(u !== ADMIN_USER || p !== ADMIN_PASS) {
+    err.textContent = '❌ Tài khoản hoặc mật khẩu không đúng';
+    document.getElementById('lgPass').value = '';
+    return;
+  }
+  err.textContent = '';
+  sessionStorage.setItem('crm_auth', '1');
+  showApp();
+}
+
+function doLogout() {
+  if(!confirm('Đăng xuất khỏi CRM?')) return;
+  sessionStorage.removeItem('crm_auth');
+  document.getElementById('appRoot').style.display = 'none';
+  document.getElementById('mobileNav').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('lgUser').value = '';
+  document.getElementById('lgPass').value = '';
+  document.getElementById('lgErr').textContent = '';
+}
+
+function showApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appRoot').style.display = 'flex';
+  if(window.innerWidth <= 768) {
+    document.getElementById('mobileNav').style.display = 'block';
+    // make dash-grid single column on mobile
+    const dg = document.querySelector('.dash-grid');
+    if(dg) dg.style.gridTemplateColumns = '1fr';
+    const fg = document.querySelector('.fu-grid');
+    if(fg) fg.style.gridTemplateColumns = '1fr';
+  }
+  initData();
+  if(window._fbSetupListeners) window._fbSetupListeners();
+  window._crmReady = true;
+}
+
+// Enter key on login
+document.getElementById('lgPass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+document.getElementById('lgUser').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('lgPass').focus(); });
+
+// Auto-login if session exists
+if(sessionStorage.getItem('crm_auth') === '1') {
+  document.getElementById('loginScreen').style.display = 'none';
+  showApp();
+}
+
+// ===== MOBILE SIDEBAR =====
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebarOverlay').classList.add('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+}
+
+// ===== DATA =====
+let C = [], P = [], S = [];
+
+function initData() {
+  C = JSON.parse(localStorage.getItem('crm_c')||'[]');
+  P = JSON.parse(localStorage.getItem('crm_p')||'[]');
+  S = JSON.parse(localStorage.getItem('crm_s')||'[]');
+  window.C = C; window.P = P; window.S = S;
+  // Seed data if empty
+  if(!C.length) {
+    S=[{id:1,name:'Minh Tuấn',phone:'0901000001',email:'',note:'Lead Sales'},{id:2,name:'Thu Hương',phone:'0901000002',email:'',note:''},{id:3,name:'Quốc Anh',phone:'0901000003',email:'',note:''}];
+    C=[
+      {id:1,name:'Nguyễn Thị Lan',phone:'0901234567',email:'lan@gmail.com',service:'Website bán hàng',source:'facebook',sId:1,status:'done',vat:'no',fd:'',ft:'',note:'Bàn giao web thời trang',ca:'2025-01-10'},
+      {id:2,name:'Trần Minh Quân',phone:'0912345678',email:'',service:'Landing page',source:'personal',sId:1,status:'dev',vat:'yes',fd:'',ft:'',note:'Cần xuất hóa đơn VAT',ca:'2025-02-01'},
+      {id:3,name:'Phạm Thu Hà',phone:'0923456789',email:'',service:'Website công ty',source:'facebook',sId:2,status:'consult',vat:'no',fd:'2026-03-05',ft:'09:30',note:'Đang tư vấn gói báo giá',ca:'2025-02-15'},
+      {id:4,name:'Lê Đức Anh',phone:'0934567890',email:'',service:'WooCommerce',source:'referral',sId:2,status:'followup',vat:'no',fd:'2026-02-26',ft:'14:00',note:'Hỏi giá chưa chốt',ca:'2025-01-25'},
+      {id:5,name:'Võ Thị Kim',phone:'0945678901',email:'',service:'Website bán hàng',source:'facebook',sId:3,status:'new',vat:'no',fd:'',ft:'',note:'Lead mới',ca:'2025-02-18'},
+      {id:6,name:'Hoàng Văn Tùng',phone:'0956789012',email:'',service:'Landing page',source:'personal',sId:3,status:'followup',vat:'no',fd:'',ft:'',note:'Chưa lên lịch push',ca:'2025-01-05'},
+    ];
+    P=[
+      {id:1,name:'Website thời trang Lan Shop',cId:1,sId:1,ck1:5000000,ck2:5000000,total:10000000,host:600000,dom:300000,oth:200000,note:'Bàn giao xong',sd:'2025-01-12',ed:'2025-02-10',st:'done'},
+      {id:2,name:'Landing page ABC',cId:2,sId:1,ck1:3000000,ck2:0,total:6000000,host:400000,dom:200000,oth:0,note:'Đang dev, đợt 2 chưa CK',sd:'2025-02-05',ed:'',st:'inprogress'},
+      {id:3,name:'Website công ty Minh Quân',cId:2,sId:2,ck1:4000000,ck2:4000000,total:8000000,host:600000,dom:300000,oth:500000,note:'',sd:'2024-12-01',ed:'2025-01-20',st:'warranty'},
+    ];
+    window.C=C;window.P=P;window.S=S;
+    save();
+  }
+  updBadge();
+  popDashSalesFilter();
+  renderDash();
+  startNotifLoop();
+}
+
+function save() {
+  localStorage.setItem('crm_c',JSON.stringify(C));
+  localStorage.setItem('crm_p',JSON.stringify(P));
+  localStorage.setItem('crm_s',JSON.stringify(S));
+  // Sync to Firebase
+  if(window._fbSave) window._fbSave(C, P, S);
+}
+
+// ===== UTILS =====
+const fmtM = n => new Intl.NumberFormat('vi-VN').format(n||0)+'₫';
+const rawN  = s => parseInt((s||'').toString().replace(/\D/g,''))||0;
+const td    = () => new Date().toISOString().split('T')[0];
+const SL    = {new:'Lead mới',contact:'Đã liên hệ',consult:'Tư vấn',contract:'Hợp đồng',dev:'Đang dev',done:'Bàn giao',followup:'Follow-up',lost:'Không chốt'};
+const SB    = {new:'badge-new',contact:'badge-contact',consult:'badge-consult',contract:'badge-contract',dev:'badge-dev',done:'badge-done',followup:'badge-followup',lost:'badge-lost'};
+const SRC   = {facebook:'Facebook',personal:'Cá nhân',referral:'Giới thiệu',other:'Khác'};
+const PST   = {pending:'⏳ Chờ',inprogress:'🔧 Đang làm',done:'✅ Bàn giao',warranty:'🛡 Bảo hành'};
+const PLS   = [{key:'new',l:'Lead mới',c:'#4f8ef7'},{key:'contact',l:'Liên hệ',c:'#f5b942'},{key:'consult',l:'Tư vấn',c:'#7c5af5'},{key:'contract',l:'Hợp đồng',c:'#f5823a'},{key:'dev',l:'Triển khai',c:'#7ab8ff'},{key:'done',l:'Bàn giao',c:'#2ecc8a'}];
+const PGMAP = {dashboard:'Tổng quan',pipeline:'Pipeline KH',customers:'Khách hàng',projects:'Dự án & Tài chính',followup:'Follow-up',sales:'Hiệu suất Sales',debt:'Công nợ',settings:'⚙️ Cài đặt & Firebase'};
+const SCOL  = ['#4f8ef7','#7c5af5','#2ecc8a','#f5b942','#f25c5c','#f5823a'];
+function profit(p){return ((p.ck1||0)+(p.ck2||0))-((p.host||0)+(p.dom||0)+(p.oth||0));}
+function sName(id){const s=S.find(x=>x.id===id);return s?s.name:'—';}
+let editPId=null;
+
+// ===== MONEY INPUT =====
+function fmtInput(el,hintId){
+  const raw=el.value.replace(/\D/g,'');
+  el.value=raw?new Intl.NumberFormat('vi-VN').format(parseInt(raw)):'';
+  const h=document.getElementById(hintId);
+  if(h)h.textContent=raw&&parseInt(raw)>0?'= '+fmtM(parseInt(raw)):'';
+}
+function getF(id){return rawN(document.getElementById(id).value);}
+function setF(id,hId,v){
+  const el=document.getElementById(id);el.value=v?new Intl.NumberFormat('vi-VN').format(v):'';
+  const h=document.getElementById(hId);if(h)h.textContent=v?'= '+fmtM(v):'';
+}
+
+// ===== NAV =====
+function nav(pg){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+pg).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>{if(n.getAttribute('onclick')&&n.getAttribute('onclick').includes(`nav('${pg}')`))n.classList.add('active');});
+  // Mobile nav active
+  document.querySelectorAll('.mnav-item').forEach(n=>{n.classList.toggle('active', n.dataset.pg===pg);});
+  document.getElementById('pgTitle').textContent=PGMAP[pg]||pg;
+  render(pg);
+}
+function render(pg){
+  if(pg==='dashboard')renderDash();
+  if(pg==='pipeline')renderPL();
+  if(pg==='customers')renderCust();
+  if(pg==='projects')renderProj();
+  if(pg==='followup')renderFU();
+  if(pg==='sales'){popDashSalesFilter();renderSales();}
+  if(pg==='debt'){popDebtSalesFilter();renderDebt();}
+  if(pg==='settings')renderSettings();
+}
+window.render=render;
+function curPg(){
+  const a=document.querySelector('.nav-item.active');
+  return a?(a.getAttribute('onclick')||'').match(/nav\('(\w+)'\)/)?.[1]||'dashboard':'dashboard';
+}
+window.curPg=curPg;
+
+// ===== MODAL =====
+function openM(id){
+  if(id==='mAddProj'||id==='mAddCust'){popSel('cSales');popSel('pCust');popSel('pSales');}
+  document.getElementById(id).classList.add('open');
+}
+function closeM(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
+function popSel(id){
+  const el=document.getElementById(id);if(!el)return;
+  if(id==='pCust')el.innerHTML='<option value="">-- Chọn KH --</option>'+C.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  else el.innerHTML='<option value="">-- Chọn --</option>'+S.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+}
+
+// ===== CUSTOMERS =====
+function saveCust(){
+  const name=document.getElementById('cName').value.trim(),phone=document.getElementById('cPhone').value.trim();
+  if(!name||!phone){alert('Nhập tên và SĐT!');return;}
+  C.push({id:Date.now(),name,phone,email:document.getElementById('cEmail').value.trim(),service:document.getElementById('cService').value.trim(),sId:parseInt(document.getElementById('cSales').value)||null,source:document.getElementById('cSource').value,status:document.getElementById('cStatus').value,vat:document.getElementById('cVat').value,fd:document.getElementById('cFDate').value,ft:document.getElementById('cFTime').value,note:document.getElementById('cNote').value.trim(),ca:td()});
+  save();closeM('mAddCust');
+  ['cName','cPhone','cEmail','cService','cNote','cFDate','cFTime'].forEach(i=>document.getElementById(i).value='');
+  updBadge();render(curPg());
+}
+function editCust(id){
+  const c=C.find(x=>x.id===id);if(!c)return;
+  popSel('ecSales');
+  document.getElementById('ecId').value=id;
+  document.getElementById('ecName').value=c.name;
+  document.getElementById('ecPhone').value=c.phone;
+  document.getElementById('ecEmail').value=c.email||'';
+  document.getElementById('ecService').value=c.service||'';
+  document.getElementById('ecSales').value=c.sId||'';
+  document.getElementById('ecSrc').value=c.source;
+  document.getElementById('ecSt').value=c.status;
+  document.getElementById('ecVat').value=c.vat;
+  document.getElementById('ecFDate').value=c.fd||'';
+  document.getElementById('ecFTime').value=c.ft||'';
+  document.getElementById('ecNote').value=c.note||'';
+  document.getElementById('mEditCust').classList.add('open');
+}
+function updCust(){
+  const id=parseInt(document.getElementById('ecId').value);
+  const idx=C.findIndex(x=>x.id===id);if(idx===-1)return;
+  const ns=document.getElementById('ecSt').value;
+  C[idx]={...C[idx],name:document.getElementById('ecName').value.trim(),phone:document.getElementById('ecPhone').value.trim(),email:document.getElementById('ecEmail').value.trim(),service:document.getElementById('ecService').value.trim(),sId:parseInt(document.getElementById('ecSales').value)||null,source:document.getElementById('ecSrc').value,status:ns,vat:document.getElementById('ecVat').value,fd:document.getElementById('ecFDate').value,ft:document.getElementById('ecFTime').value,note:document.getElementById('ecNote').value.trim()};
+  if(ns==='done'||ns==='lost'){C[idx].fd='';C[idx].ft='';}
+  save();closeM('mEditCust');updBadge();render(curPg());
+}
+function delCust(id){if(!confirm('Xóa khách hàng?'))return;C=C.filter(x=>x.id!==id);save();updBadge();render(curPg());}
+
+// ===== PROJECTS =====
+function saveProj(){
+  const name=document.getElementById('pName').value.trim();
+  const cId=parseInt(document.getElementById('pCust').value);
+  if(!name||!cId){alert('Nhập tên và chọn KH!');return;}
+  const np={id:editPId||Date.now(),name,cId,sId:parseInt(document.getElementById('pSales').value)||null,ck1:getF('pCk1'),ck2:getF('pCk2'),total:getF('pTotal'),host:getF('pHost'),dom:getF('pDom'),oth:getF('pOth'),note:document.getElementById('pNote').value.trim(),sd:document.getElementById('pStart').value,ed:document.getElementById('pEnd').value,st:document.getElementById('pSt').value};
+  if(editPId){const i=P.findIndex(x=>x.id===editPId);P[i]=np;editPId=null;}else P.push(np);
+  save();closeM('mAddProj');
+  ['pName','pCk1','pCk2','pTotal','pHost','pDom','pOth','pNote','pStart','pEnd'].forEach(i=>document.getElementById(i).value='');
+  ['pCk1H','pCk2H','pTotalH','pHostH','pDomH','pOthH'].forEach(i=>{const e=document.getElementById(i);if(e)e.textContent='';});
+  render('projects');
+}
+function editProj(id){
+  const p=P.find(x=>x.id===id);if(!p)return;
+  editPId=id;popSel('pCust');popSel('pSales');
+  document.getElementById('pName').value=p.name;
+  document.getElementById('pCust').value=p.cId;
+  document.getElementById('pSales').value=p.sId||'';
+  setF('pCk1','pCk1H',p.ck1);setF('pCk2','pCk2H',p.ck2);setF('pTotal','pTotalH',p.total);
+  setF('pHost','pHostH',p.host);setF('pDom','pDomH',p.dom);setF('pOth','pOthH',p.oth);
+  document.getElementById('pNote').value=p.note;
+  document.getElementById('pStart').value=p.sd||'';
+  document.getElementById('pEnd').value=p.ed||'';
+  document.getElementById('pSt').value=p.st;
+  document.getElementById('mAddProj').classList.add('open');
+}
+function delProj(id){if(!confirm('Xóa dự án?'))return;P=P.filter(x=>x.id!==id);save();render('projects');}
+
+// ===== SALES =====
+function saveSales(){
+  const name=document.getElementById('sName').value.trim();
+  if(!name){alert('Nhập tên!');return;}
+  S.push({id:Date.now(),name,phone:document.getElementById('sPhone').value.trim(),email:document.getElementById('sEmail').value.trim(),note:document.getElementById('sNote').value.trim()});
+  save();closeM('mAddSales');
+  ['sName','sPhone','sEmail','sNote'].forEach(i=>document.getElementById(i).value='');
+  renderSales();
+}
+function delSales(id){if(!confirm('Xóa sales?'))return;S=S.filter(x=>x.id!==id);save();renderSales();}
+function editSales(id){
+  const s=S.find(x=>x.id===id);if(!s)return;
+  document.getElementById('esId').value=id;
+  document.getElementById('esName').value=s.name;
+  document.getElementById('esPhone').value=s.phone||'';
+  document.getElementById('esEmail').value=s.email||'';
+  document.getElementById('esNote').value=s.note||'';
+  document.getElementById('mEditSales').classList.add('open');
+}
+function updSales(){
+  const id=parseInt(document.getElementById('esId').value);
+  const idx=S.findIndex(x=>x.id===id);if(idx===-1)return;
+  const name=document.getElementById('esName').value.trim();
+  if(!name){alert('Nhập tên!');return;}
+  S[idx]={...S[idx],name,phone:document.getElementById('esPhone').value.trim(),email:document.getElementById('esEmail').value.trim(),note:document.getElementById('esNote').value.trim()};
+  save();closeM('mEditSales');renderSales();
+}
+
+function swTab(show,hide,el){
+  document.getElementById(show).style.display='block';document.getElementById(hide).style.display='none';
+  el.parentElement.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');
+  if(show==='tabSum')renderProj();
+}
+
+// ===== BADGE =====
+function updBadge(){
+  const t=td();
+  const n=C.filter(c=>{if(c.status==='done'||c.status==='lost')return false;if(c.fd&&c.fd<=t)return true;if(c.status==='followup'&&!c.fd)return true;return false;}).length;
+  ['fuBadge','mnavBadge'].forEach(id=>{const b=document.getElementById(id);if(b){b.textContent=n;b.style.display=n?'inline':'none';}});
+}
+window.updBadge=updBadge;
+
+// ===== TOAST =====
+function toast(title,body,type='info',dur=8000){
+  const ct=document.getElementById('toastCont');
+  const el=document.createElement('div');el.className=`toast ${type}`;
+  el.innerHTML=`<div class="t-title">${type==='urgent'?'🔔':'📅'} ${title}</div><div class="t-body">${body}</div><div class="t-time">${new Date().toLocaleTimeString('vi-VN')}</div>`;
+  el.onclick=()=>el.remove();ct.appendChild(el);
+  setTimeout(()=>{el.style.animation='tOut .3s ease forwards';setTimeout(()=>el.remove(),300);},dur);
+}
+
+// ===== NOTIFICATIONS =====
+const notified=new Set(JSON.parse(sessionStorage.getItem('crm_ntf')||'[]'));
+function saveNtf(){sessionStorage.setItem('crm_ntf',JSON.stringify([...notified]));}
+function checkNtf(){
+  const now=new Date(),t=td();
+  C.forEach(c=>{
+    if(c.status==='done'||c.status==='lost'||!c.fd||!c.ft||c.fd!==t)return;
+    const key=`${c.id}_${c.fd}_${c.ft}`;
+    const[h,m]=c.ft.split(':').map(Number);
+    const sched=new Date();sched.setHours(h,m,0,0);
+    const diff=sched-now;
+    if(diff<=0&&diff>-60000&&!notified.has(key)){
+      toast(`Follow-up: ${c.name}`,`📱 ${c.phone}${c.service?' – '+c.service:''}${c.note?'<br>'+c.note:''}`, 'urgent',12000);
+      notified.add(key);saveNtf();
+    } else if(diff>0&&diff<=5*60000){
+      const wk=key+'_w';
+      if(!notified.has(wk)){toast(`Còn ${Math.round(diff/60000)} phút: ${c.name}`,`⏰ ${c.ft} | ${c.phone}`,'info',8000);notified.add(wk);saveNtf();}
+    }
+  });
+}
+function startNotifLoop(){
+  setTimeout(()=>{
+    const t=td();
+    C.filter(c=>c.fd===t&&c.ft&&c.status!=='done'&&c.status!=='lost').forEach(c=>{
+      const[h,m]=c.ft.split(':').map(Number);const sc=new Date();sc.setHours(h,m,0,0);
+      if(sc>new Date())toast(`Lịch hôm nay: ${c.name}`,`⏰ ${c.ft} – ${c.phone}`,'info',5000);
+    });
+    const ov=C.filter(c=>{if(c.status==='done'||c.status==='lost')return false;if(c.fd&&c.fd<t)return true;if(c.status==='followup'&&!c.fd)return true;return false;});
+    if(ov.length)toast(`${ov.length} lịch follow-up cần xử lý`,ov.slice(0,3).map(c=>c.name).join(', ')+(ov.length>3?'...':''),'urgent',10000);
+  },1500);
+  setInterval(checkNtf, 30000);
+}
+
+// ===== PERIOD UTILS =====
+function dashInPeriod(dateStr,period){
+  if(period==='all')return true;
+  if(!dateStr)return false;
+  const d=new Date(dateStr),now=new Date();
+  const y=now.getFullYear(),m=now.getMonth(),q=Math.floor(m/3);
+  if(period==='month')return d.getFullYear()===y&&d.getMonth()===m;
+  if(period==='lastmonth'){const lm=m===0?11:m-1,ly=m===0?y-1:y;return d.getFullYear()===ly&&d.getMonth()===lm;}
+  if(period==='quarter')return d.getFullYear()===y&&Math.floor(d.getMonth()/3)===q;
+  if(period==='lastquarter'){const lq=q===0?3:q-1,ly=q===0?y-1:y;return d.getFullYear()===ly&&Math.floor(d.getMonth()/3)===lq;}
+  if(period==='year')return d.getFullYear()===y;
+  if(period==='lastyear')return d.getFullYear()===y-1;
+  return true;
+}
+function dashPeriodLabel(period){
+  const now=new Date();
+  const M=['Th.1','Th.2','Th.3','Th.4','Th.5','Th.6','Th.7','Th.8','Th.9','Th.10','Th.11','Th.12'];
+  if(period==='month')return M[now.getMonth()]+'/'+now.getFullYear();
+  if(period==='lastmonth'){const lm=now.getMonth()===0?11:now.getMonth()-1;return M[lm]+'/'+(now.getMonth()===0?now.getFullYear()-1:now.getFullYear());}
+  if(period==='quarter')return `Q${Math.floor(now.getMonth()/3)+1}/${now.getFullYear()}`;
+  if(period==='lastquarter'){const lq=Math.floor(now.getMonth()/3);return lq===0?`Q4/${now.getFullYear()-1}`:`Q${lq}/${now.getFullYear()}`;}
+  if(period==='year')return 'Năm '+now.getFullYear();
+  if(period==='lastyear')return 'Năm '+(now.getFullYear()-1);
+  return 'Tất cả';
+}
+
+// ===== DASHBOARD =====
+function popDashSalesFilter(){
+  const sel=document.getElementById('dashSales');if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">👥 Tất cả Sales</option>'+S.map(s=>`<option value="${s.id}"${cur==s.id?' selected':''}>${s.name}</option>`).join('');
+}
+function renderDash(){
+  popDashSalesFilter();
+  const period=document.getElementById('dashPeriod')?.value||'all';
+  const sIdF=parseInt(document.getElementById('dashSales')?.value)||null;
+  let fp=P.filter(p=>dashInPeriod(p.sd||p.ed||'',period));
+  if(sIdF)fp=fp.filter(p=>p.sId===sIdF);
+  let fc=C.filter(c=>dashInPeriod(c.ca||'',period));
+  if(sIdF)fc=fc.filter(c=>c.sId===sIdF);
+  const lbl=dashPeriodLabel(period);
+  const salesName=sIdF?(S.find(x=>x.id===sIdF)?.name||''):'';
+  const filterDesc=[lbl,salesName].filter(Boolean).join(' · ');
+  const filterEl=document.getElementById('dashFilterLabel');
+  if(filterEl)filterEl.textContent=filterDesc&&filterDesc!=='Tất cả'?'📌 '+filterDesc:'';
+  const rev=fp.reduce((s,p)=>s+(p.ck1||0)+(p.ck2||0),0);
+  const prf=fp.reduce((s,p)=>s+profit(p),0);
+  const dbt=fp.reduce((s,p)=>s+Math.max(0,(p.total||0)-((p.ck1||0)+(p.ck2||0))),0);
+  const dn=fc.filter(c=>c.status==='done').length;
+  document.getElementById('statsGrid').innerHTML=`
+    <div class="stat-card"><div class="stat-label">Tổng KH</div><div class="stat-value blue">${fc.length}</div><div class="stat-sub">${dn} đã chốt · ${filterDesc||'Tất cả'}</div></div>
+    <div class="stat-card"><div class="stat-label">Doanh thu</div><div class="stat-value green">${fmtM(rev)}</div><div class="stat-sub">${fp.length} dự án</div></div>
+    <div class="stat-card"><div class="stat-label">Lợi nhuận</div><div class="stat-value ${prf>=0?'green':'red'}">${fmtM(prf)}</div><div class="stat-sub">Sau trừ chi phí</div></div>
+    <div class="stat-card"><div class="stat-label">Công nợ</div><div class="stat-value yellow">${fmtM(dbt)}</div><div class="stat-sub">Chưa thu</div></div>`;
+  const ptEl=document.getElementById('dashProjTitle');
+  if(ptEl)ptEl.textContent='Dự án'+(filterDesc&&filterDesc!=='Tất cả'?' – '+filterDesc:'');
+  const cntEl=document.getElementById('dashProjCnt');
+  if(cntEl)cntEl.textContent=fp.length+' dự án';
+  document.getElementById('dashProjTb').innerHTML=fp.length?[...fp].reverse().map(p=>{
+    const c=C.find(x=>x.id===p.cId);const pf=profit(p);const rv=(p.ck1||0)+(p.ck2||0);const db=Math.max(0,(p.total||0)-rv);
+    return`<tr><td><strong>${p.name}</strong></td><td>${c?c.name:'—'}</td><td style="font-size:12px">${sName(p.sId)}</td><td class="mono" style="color:var(--green)">${fmtM(rv)}</td><td class="loin ${pf>=0?'pos':'neg'}">${fmtM(pf)}</td><td class="mono ${db>0?'loin neg':''}">${db>0?fmtM(db):'<span style="color:var(--green)">✅</span>'}</td><td><span class="badge badge-new">${PST[p.st]||p.st}</span></td></tr>`;
+  }).join(''):'<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text3)">Không có dự án trong kỳ này</td></tr>';
+  const sbEl=document.getElementById('dashSalesBreak');
+  if(!sIdF&&S.length){
+    sbEl.style.display='block';
+    const sbLbl=document.getElementById('dashSalesBreakLabel');
+    if(sbLbl)sbLbl.textContent=filterDesc&&filterDesc!=='Tất cả'?'Kỳ: '+filterDesc:'';
+    document.getElementById('dashSalesTb').innerHTML=S.map((s,ci)=>{
+      const sp=fp.filter(p=>p.sId===s.id);
+      const sc2=fc.filter(c=>c.sId===s.id);
+      const dn2=sc2.filter(c=>c.status==='done').length;
+      const rv2=sp.reduce((sum,p)=>sum+(p.ck1||0)+(p.ck2||0),0);
+      const tc2=sp.reduce((sum,p)=>sum+(p.total||0),0);
+      const cp2=sp.reduce((sum,p)=>sum+(p.host||0)+(p.dom||0)+(p.oth||0),0);
+      const pf2=rv2-cp2;const db2=sp.reduce((sum,p)=>sum+Math.max(0,(p.total||0)-((p.ck1||0)+(p.ck2||0))),0);
+      const cr=sc2.length?Math.round(dn2/sc2.length*100):0;
+      const ini=s.name.split(' ').map(x=>x[0]).slice(-2).join('').toUpperCase();
+      return`<tr><td><div style="display:flex;align-items:center;gap:7px"><div style="width:26px;height:26px;border-radius:50%;background:${SCOL[ci%SCOL.length]};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#fff">${ini}</div><strong>${s.name}</strong></div></td>
+      <td class="mono">${sp.length}</td><td class="mono" style="color:var(--green)">${fmtM(rv2)}</td><td class="mono">${fmtM(tc2)}</td><td class="mono" style="color:var(--red)">${fmtM(cp2)}</td>
+      <td class="loin ${pf2>=0?'pos':'neg'}">${fmtM(pf2)}</td><td class="mono ${db2>0?'loin neg':''}">${db2>0?fmtM(db2):'<span style="color:var(--green)">✅</span>'}</td>
+      <td><div style="display:flex;align-items:center;gap:6px"><span class="mono" style="color:${cr>=50?'var(--green)':'var(--yellow)'};min-width:30px">${cr}%</span><div style="flex:1;background:var(--border);border-radius:2px;height:6px;min-width:40px"><div style="width:${cr}%;height:100%;border-radius:2px;background:${cr>=50?'var(--green)':'var(--yellow)'}"></div></div></div></td></tr>`;
+    }).join('')||'<tr><td colspan="8" style="text-align:center;padding:16px;color:var(--text3)">Chưa có dữ liệu</td></tr>';
+  } else { sbEl.style.display='none'; }
+  const t=td();
+  const ov=C.filter(c=>{if(c.status==='done'||c.status==='lost')return false;if(c.fd&&c.fd<t)return true;if(c.status==='followup'&&!c.fd)return true;return false;});
+  const tf2=C.filter(c=>c.fd===t&&c.status!=='done'&&c.status!=='lost');
+  const its=[...ov.map(c=>`<div class="fu-item overdue"><div class="fu-left"><div class="fu-name">${c.name}</div><div class="fu-meta">${c.phone}${c.ft?' – ⏰'+c.ft:''}</div></div><span class="badge badge-lost">Quá hạn</span></div>`),
+    ...tf2.map(c=>`<div class="fu-item today"><div class="fu-left"><div class="fu-name">${c.name}</div><div class="fu-meta">${c.phone}${c.ft?' ⏰'+c.ft:''}</div></div><span class="badge badge-contact">Hôm nay</span></div>`)];
+  document.getElementById('dashFU').innerHTML=its.length?its.join(''):'<div style="color:var(--text3);font-size:13px;padding:8px">✅ Không có lịch cần xử lý</div>';
+  document.getElementById('dashPL').innerHTML=PLS.map(s=>{const n=C.filter(c=>c.status===s.key).length;return`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)"><div style="display:flex;align-items:center;gap:7px;font-size:13px"><span style="width:6px;height:6px;border-radius:50%;background:${s.c};display:inline-block"></span>${s.l}</div><strong style="font-family:'JetBrains Mono',monospace;color:${s.c}">${n}</strong></div>`;}).join('');
+}
+
+// ===== PIPELINE =====
+function renderPL(){
+  document.getElementById('plBoard').innerHTML=PLS.map(s=>{
+    const sc=C.filter(c=>c.status===s.key);
+    return`<div class="pipeline-col"><div class="pipeline-header" style="background:${s.c}22;color:${s.c}">${s.l}<span class="cnt">${sc.length}</span></div>
+    <div class="pipeline-body">${sc.length?sc.map(c=>`<div class="pipeline-card" onclick="editCust(${c.id})"><div class="pcn">${c.name}</div><div class="pcm"><span>📱 ${c.phone}</span>${c.service?`<span>${c.service}</span>`:''}</div><div class="pcm" style="margin-top:2px"><span class="tag">${SRC[c.source]||c.source}</span>${c.vat==='yes'?'<span class="tag">VAT</span>':''}</div>${c.fd?`<div style="font-size:11px;color:var(--text3);margin-top:4px">📅 ${c.fd}${c.ft?' ⏰'+c.ft:''}</div>`:''}</div>`).join(''):'<div style="color:var(--text3);font-size:12px;text-align:center;padding:12px">Trống</div>'}
+    </div></div>`;
+  }).join('');
+}
+
+// ===== CUSTOMERS =====
+function renderCust(){
+  const q=(document.getElementById('srchCust').value||'').toLowerCase();
+  const sf=document.getElementById('filtSt').value;
+  const sc=document.getElementById('filtSrc').value;
+  let list=C;
+  if(q)list=list.filter(c=>c.name.toLowerCase().includes(q)||c.phone.includes(q)||(c.service||'').toLowerCase().includes(q));
+  if(sf)list=list.filter(c=>c.status===sf);
+  if(sc)list=list.filter(c=>c.source===sc);
+  document.getElementById('custCnt').textContent=`${list.length} khách hàng`;
+  document.getElementById('custTb').innerHTML=list.length?list.map((c,i)=>`<tr>
+    <td style="color:var(--text3)">${i+1}</td>
+    <td><strong>${c.name}</strong></td>
+    <td class="mono">${c.phone}</td>
+    <td><span class="tag">${SRC[c.source]||c.source}</span></td>
+    <td>${c.service||'—'}</td>
+    <td style="font-size:12px">${sName(c.sId)}</td>
+    <td><span class="badge ${SB[c.status]||'badge-new'}">${SL[c.status]||c.status}</span></td>
+    <td>${c.vat==='yes'?'<span class="badge badge-contract">VAT</span>':'—'}</td>
+    <td style="color:var(--text3);font-size:12px">${c.ca||'—'}</td>
+    <td style="max-width:130px;font-size:12px;color:var(--text2)">${c.note||'—'}</td>
+    <td><div class="inline-actions"><button class="btn btn-ghost btn-sm" onclick="editCust(${c.id})">✏️</button><button class="btn btn-danger btn-sm" onclick="delCust(${c.id})">🗑</button></div></td>
+  </tr>`).join(''):'<tr><td colspan="11" style="text-align:center;padding:32px;color:var(--text3)">Không có khách hàng</td></tr>';
+}
+
+// ===== PROJECTS =====
+function renderProj(){
+  document.getElementById('projTb').innerHTML=P.length?P.map(p=>{
+    const c=C.find(x=>x.id===p.cId);const pf=profit(p);const rv=(p.ck1||0)+(p.ck2||0);
+    return`<tr>
+      <td><strong>${p.name}</strong><div style="font-size:11px;color:var(--text3);margin-top:1px">${PST[p.st]||p.st}</div></td>
+      <td>${c?c.name:'—'}</td><td style="font-size:12px">${sName(p.sId)}</td>
+      <td class="mono">${fmtM(p.ck1)}</td><td class="mono">${fmtM(p.ck2)}</td>
+      <td class="mono" style="color:var(--accent)">${fmtM(rv)}</td>
+      <td class="mono" style="color:var(--red)">-${fmtM(p.host)}</td><td class="mono" style="color:var(--red)">-${fmtM(p.dom)}</td><td class="mono" style="color:var(--red)">-${fmtM(p.oth)}</td>
+      <td><div class="loin ${pf>=0?'pos':'neg'}">${fmtM(pf)}</div><div class="profit-bar"><div class="profit-fill" style="width:${p.total?Math.min(100,rv/p.total*100):0}%;background:${pf>=0?'var(--green)':'var(--red)'}"></div></div></td>
+      <td style="font-size:12px;color:var(--text2);max-width:110px">${p.note||'—'}</td>
+      <td><div class="inline-actions"><button class="btn btn-ghost btn-sm" onclick="editProj(${p.id})">✏️</button><button class="btn btn-danger btn-sm" onclick="delProj(${p.id})">🗑</button></div></td>
+    </tr>`;}).join(''):'<tr><td colspan="12" style="text-align:center;padding:32px;color:var(--text3)">Chưa có dự án</td></tr>';
+  const rv=P.reduce((s,p)=>s+(p.ck1||0)+(p.ck2||0),0);
+  const cp=P.reduce((s,p)=>s+(p.host||0)+(p.dom||0)+(p.oth||0),0);
+  const tc=P.reduce((s,p)=>s+(p.total||0),0);
+  document.getElementById('finStats').innerHTML=`<div class="stat-card"><div class="stat-label">Tổng HĐ</div><div class="stat-value blue">${fmtM(tc)}</div></div><div class="stat-card"><div class="stat-label">Đã nhận</div><div class="stat-value green">${fmtM(rv)}</div></div><div class="stat-card"><div class="stat-label">Tổng CP</div><div class="stat-value red">${fmtM(cp)}</div></div><div class="stat-card"><div class="stat-label">Lợi nhuận</div><div class="stat-value ${rv-cp>=0?'green':'red'}">${fmtM(rv-cp)}</div></div>`;
+  document.getElementById('finChart').innerHTML=P.map(p=>{const pf=profit(p);const rv=(p.ck1||0)+(p.ck2||0);const pc=p.total?Math.round(rv/p.total*100):(rv>0?100:0);return`<div style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span style="font-weight:600">${p.name}</span><span class="loin ${pf>=0?'pos':'neg'}">${fmtM(pf)}</span></div><div style="display:flex;gap:6px;font-size:11px;color:var(--text3);margin-bottom:4px;flex-wrap:wrap"><span>HĐ:${fmtM(p.total)}</span><span>Đã nhận:${fmtM(rv)}(${pc}%)</span><span>CP:${fmtM((p.host||0)+(p.dom||0)+(p.oth||0))}</span></div><div class="profit-bar" style="height:8px"><div class="profit-fill" style="width:${pc}%;background:${pf>=0?'var(--green)':'var(--red)'}"></div></div></div>`;}).join('')||'<div style="color:var(--text3);text-align:center;padding:24px">Chưa có dự án</div>';
+}
+
+// ===== FOLLOW-UP =====
+function renderFU(){
+  const t=td();
+  const ov=C.filter(c=>{if(c.status==='done'||c.status==='lost')return false;if(c.fd&&c.fd<t)return true;if(c.status==='followup'&&!c.fd)return true;return false;});
+  const up=C.filter(c=>c.fd&&c.fd>=t&&c.status!=='done'&&c.status!=='lost');
+  document.getElementById('fuOverdue').innerHTML=ov.length?ov.map(c=>`<div class="fu-item overdue"><div class="fu-left"><div class="fu-name">${c.name}</div><div class="fu-meta">📱 ${c.phone} | ${c.service||'—'}</div><div class="fu-date">${c.fd?`⏰ Hạn: ${c.fd}${c.ft?' '+c.ft:''}`:'⚠️ Chưa đặt lịch'}${c.note?' • '+c.note:''}</div></div><div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0"><span class="badge ${c.fd?'badge-lost':'badge-followup'}">${c.fd?'Quá hạn':'Chưa lịch'}</span><button class="btn btn-ghost btn-sm" onclick="editCust(${c.id})">Đặt lịch</button></div></div>`).join(''):'<div style="color:var(--text3);padding:10px;font-size:13px">✅ Không có lịch quá hạn</div>';
+  document.getElementById('fuUpcoming').innerHTML=up.length?up.map(c=>`<div class="fu-item ${c.fd===t?'today':''}"><div class="fu-left"><div class="fu-name">${c.name}</div><div class="fu-meta">📱 ${c.phone} | ${c.service||'—'}</div><div class="fu-date">📅 ${c.fd}${c.ft?' ⏰ <strong style="color:var(--yellow)">'+c.ft+'</strong>':''} ${c.fd===t?'<strong style="color:var(--yellow)">(Hôm nay!)</strong>':''}</div></div><button class="btn btn-ghost btn-sm" onclick="editCust(${c.id})">Cập nhật</button></div>`).join(''):'<div style="color:var(--text3);padding:10px;font-size:13px">Không có lịch sắp tới</div>';
+  const all=C.filter(c=>c.status!=='done'&&c.status!=='lost'&&(c.fd||c.status==='followup')).sort((a,b)=>{if(!a.fd&&b.fd)return -1;if(a.fd&&!b.fd)return 1;return(a.fd||'').localeCompare(b.fd||'');});
+  document.getElementById('fuTb').innerHTML=all.length?all.map(c=>`<tr>
+    <td><strong>${c.name}</strong></td>
+    <td class="mono">${c.phone}</td>
+    <td style="font-size:12px">${sName(c.sId)}</td>
+    <td><span class="badge ${SB[c.status]||'badge-new'}">${SL[c.status]||c.status}</span></td>
+    <td class="mono ${!c.fd?'loin neg':c.fd<t?'loin neg':c.fd===t?'loin pos':''}">${c.fd?(c.fd+(c.ft?' <strong style="color:var(--yellow)">⏰'+c.ft+'</strong>':'')):'<span style="color:var(--red);font-size:11px">⚠️ Chưa đặt lịch</span>'}</td>
+    <td style="font-size:12px;color:var(--text2)">${c.note||'—'}</td>
+    <td><div class="inline-actions"><button class="btn btn-ghost btn-sm" onclick="editCust(${c.id})">✏️</button><button class="btn btn-success btn-sm" onclick="markDone(${c.id})">✅ Chốt</button><button class="btn btn-danger btn-sm" onclick="markLost(${c.id})">❌</button></div></td>
+  </tr>`).join(''):'<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text3)">Không có lịch</td></tr>';
+}
+function markDone(id){const i=C.findIndex(x=>x.id===id);if(i===-1)return;if(!confirm(`Đánh dấu "${C[i].name}" đã chốt?`))return;C[i].status='done';C[i].fd='';C[i].ft='';save();updBadge();renderFU();}
+function markLost(id){const i=C.findIndex(x=>x.id===id);if(i===-1)return;if(!confirm(`Đánh dấu "${C[i].name}" không chốt được?`))return;C[i].status='lost';C[i].fd='';C[i].ft='';save();updBadge();renderFU();}
+
+// ===== SALES PAGE =====
+function renderSales(){
+  const period=document.getElementById('slPeriod').value;
+  const now=new Date();
+  function inP(p){
+    const d=new Date(p.sd||p.ed||'2020-01-01');
+    if(period==='all')return true;
+    if(period==='month')return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();
+    if(period==='lastmonth'){const lm=new Date(now.getFullYear(),now.getMonth()-1,1);return d.getMonth()===lm.getMonth()&&d.getFullYear()===lm.getFullYear();}
+    if(period==='quarter'){const q=Math.floor(now.getMonth()/3);return Math.floor(d.getMonth()/3)===q&&d.getFullYear()===now.getFullYear();}
+    if(period==='year')return d.getFullYear()===now.getFullYear();
+    return true;
+  }
+  const fp=P.filter(inP);
+  const stats=S.map(s=>{
+    const sp=fp.filter(p=>p.sId===s.id);const sc=C.filter(c=>c.sId===s.id);
+    const dn=sc.filter(c=>c.status==='done').length;
+    const rv=sp.reduce((sum,p)=>sum+(p.ck1||0)+(p.ck2||0),0);
+    const tc=sp.reduce((sum,p)=>sum+(p.total||0),0);
+    const pf=sp.reduce((sum,p)=>sum+profit(p),0);
+    return{...s,sp,sc,dn,rv,tc,pf};
+  }).sort((a,b)=>b.rv-a.rv);
+  document.getElementById('slCards').innerHTML=stats.length?stats.map((s,i)=>{
+    const cr=s.sc.length?Math.round(s.dn/s.sc.length*100):0;
+    const ini=s.name.split(' ').map(x=>x[0]).slice(-2).join('').toUpperCase();
+    return`<div class="sales-card">
+      <div class="sales-name"><div class="s-avatar" style="background:${SCOL[i%SCOL.length]}">${ini}</div>${s.name}
+        ${i===0?'<span class="rnk rnk1">🥇 #1</span>':i===1?'<span class="rnk rnk2">🥈 #2</span>':i===2?'<span class="rnk rnk3">🥉 #3</span>':''}
+        <div style="margin-left:auto;display:flex;gap:4px"><button class="btn btn-ghost btn-sm" onclick="editSales(${s.id})">✏️</button><button class="btn btn-danger btn-sm" onclick="delSales(${s.id})">🗑</button></div>
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px">${s.phone||''}${s.note?' • '+s.note:''}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+        <div style="background:var(--surface2);border-radius:8px;padding:9px"><div style="font-size:11px;color:var(--text3);margin-bottom:2px">Doanh thu</div><div style="font-weight:700;font-size:13px;color:var(--green);font-family:'JetBrains Mono',monospace">${fmtM(s.rv)}</div></div>
+        <div style="background:var(--surface2);border-radius:8px;padding:9px"><div style="font-size:11px;color:var(--text3);margin-bottom:2px">Lợi nhuận</div><div style="font-weight:700;font-size:13px;color:${s.pf>=0?'var(--accent)':'var(--red)'};font-family:'JetBrains Mono',monospace">${fmtM(s.pf)}</div></div>
+        <div style="background:var(--surface2);border-radius:8px;padding:9px"><div style="font-size:11px;color:var(--text3);margin-bottom:2px">Dự án</div><div style="font-weight:700;font-size:16px;color:var(--yellow)">${s.sp.length}</div></div>
+        <div style="background:var(--surface2);border-radius:8px;padding:9px"><div style="font-size:11px;color:var(--text3);margin-bottom:2px">Tỷ lệ chốt</div><div style="font-weight:700;font-size:16px;color:var(--accent2)">${cr}%</div></div>
+      </div>
+      <div class="profit-bar" style="margin-top:9px;height:6px"><div class="profit-fill" style="width:${stats[0].rv?Math.round(s.rv/stats[0].rv*100):0}%;background:${SCOL[i%SCOL.length]}"></div></div>
+    </div>`;
+  }).join(''):`<div style="color:var(--text3);padding:32px;text-align:center;grid-column:1/-1">Chưa có thành viên sales. <button class="btn btn-ghost btn-sm" onclick="openM('mAddSales')">+ Thêm ngay</button></div>`;
+  document.getElementById('slTb').innerHTML=stats.map((s,i)=>{
+    const cr=s.sc.length?Math.round(s.dn/s.sc.length*100):0;
+    return`<tr><td><strong style="color:${i===0?'var(--yellow)':i===1?'#adb5bd':i===2?'#cd7f32':'var(--text3)'}">#${i+1}</strong></td><td><strong>${s.name}</strong></td><td class="mono">${s.sp.length}</td><td class="mono" style="color:var(--green)">${fmtM(s.rv)}</td><td class="mono">${fmtM(s.tc)}</td><td class="loin ${s.pf>=0?'pos':'neg'}">${fmtM(s.pf)}</td>
+    <td><div style="display:flex;align-items:center;gap:7px"><span class="mono" style="color:${cr>=50?'var(--green)':'var(--yellow)'}">${cr}%</span><div style="flex:1;background:var(--border);border-radius:2px;height:6px;min-width:50px"><div style="width:${cr}%;height:100%;border-radius:2px;background:${cr>=50?'var(--green)':'var(--yellow)'}"></div></div></div></td>
+    <td><div class="inline-actions"><button class="btn btn-ghost btn-sm" onclick="editSales(${s.id})">✏️</button><button class="btn btn-danger btn-sm" onclick="delSales(${s.id})">🗑</button></div></td></tr>`;
+  }).join('')||'<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text3)">Chưa có dữ liệu</td></tr>';
+  document.getElementById('slProjList').innerHTML=stats.map(s=>{
+    if(!s.sp.length)return'';
+    return`<div style="margin-bottom:18px"><div style="font-weight:700;font-size:14px;margin-bottom:9px;color:var(--text2);border-bottom:1px solid var(--border);padding-bottom:5px">👤 ${s.name} – ${s.sp.length} dự án</div>
+    ${s.sp.map(p=>{const c=C.find(x=>x.id===p.cId);const pf=profit(p);return`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--surface2);flex-wrap:wrap;gap:6px"><div><strong style="font-size:13px">${p.name}</strong><span style="font-size:11px;color:var(--text3);margin-left:7px">${c?c.name:'—'} • ${PST[p.st]||p.st}</span></div><div style="display:flex;gap:14px;font-family:'JetBrains Mono',monospace;font-size:12px"><span style="color:var(--accent)">+${fmtM((p.ck1||0)+(p.ck2||0))}</span><span class="${pf>=0?'loin pos':'loin neg'}">${fmtM(pf)}</span></div></div>`;}).join('')}
+    </div>`;
+  }).join('')||'<div style="color:var(--text3);text-align:center;padding:24px">Không có dự án trong kỳ</div>';
+}
+
+// ===== DEBT =====
+function popDebtSalesFilter(){
+  const sel=document.getElementById('debtSales');if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">👥 Tất cả Sales</option>'+S.map(s=>`<option value="${s.id}"${cur==s.id?' selected':''}>${s.name}</option>`).join('');
+}
+function renderDebt(){
+  popDebtSalesFilter();
+  const period=document.getElementById('debtPeriod')?.value||'all';
+  const sIdF=parseInt(document.getElementById('debtSales')?.value)||null;
+  const stF=document.getElementById('debtStatus')?.value||'';
+  let fp=P.filter(p=>dashInPeriod(p.sd||p.ed||'',period));
+  if(sIdF)fp=fp.filter(p=>p.sId===sIdF);
+  let dp=fp.map(p=>({...p,rv:(p.ck1||0)+(p.ck2||0),db:Math.max(0,(p.total||0)-((p.ck1||0)+(p.ck2||0)))}));
+  if(stF==='debt')dp=dp.filter(p=>p.db>0);
+  if(stF==='paid')dp=dp.filter(p=>p.db===0);
+  const lbl=dashPeriodLabel(period);
+  const salesName=sIdF?(S.find(x=>x.id===sIdF)?.name||''):'';
+  const filterDesc=[lbl,salesName].filter(Boolean).join(' · ');
+  const filterEl=document.getElementById('debtFilterLabel');
+  if(filterEl)filterEl.textContent=filterDesc&&filterDesc!=='Tất cả'?'📌 '+filterDesc:'';
+  const tdbt=dp.reduce((s,p)=>s+p.db,0),trv=dp.reduce((s,p)=>s+p.rv,0),ttc=dp.reduce((s,p)=>s+(p.total||0),0);
+  const paidPct=ttc?Math.round(trv/ttc*100):0;
+  document.getElementById('debtStats').innerHTML=`
+    <div class="stat-card"><div class="stat-label">Tổng HĐ</div><div class="stat-value blue">${fmtM(ttc)}</div><div class="stat-sub">${dp.length} dự án</div></div>
+    <div class="stat-card"><div class="stat-label">Đã thu</div><div class="stat-value green">${fmtM(trv)}</div><div class="stat-sub"><div style="display:flex;align-items:center;gap:5px;margin-top:3px"><div style="flex:1;background:var(--border);border-radius:3px;height:4px"><div style="width:${paidPct}%;height:100%;border-radius:3px;background:var(--green)"></div></div><span>${paidPct}%</span></div></div></div>
+    <div class="stat-card"><div class="stat-label">Còn nợ</div><div class="stat-value ${tdbt>0?'red':'green'}">${fmtM(tdbt)}</div><div class="stat-sub">${dp.filter(p=>p.db>0).length} DA chưa thu đủ</div></div>
+    <div class="stat-card"><div class="stat-label">Đã TT đủ</div><div class="stat-value green">${dp.filter(p=>p.db===0).length}</div><div class="stat-sub">/ ${dp.length} dự án</div></div>`;
+  const sbEl=document.getElementById('debtSalesBreak');
+  if(!sIdF&&S.length){
+    sbEl.style.display='block';
+    const sbLbl=document.getElementById('debtSalesBreakLabel');
+    if(sbLbl)sbLbl.textContent=filterDesc&&filterDesc!=='Tất cả'?'Kỳ: '+filterDesc:'';
+    const fpRaw=P.filter(p=>dashInPeriod(p.sd||p.ed||'',period)).map(p=>({...p,rv:(p.ck1||0)+(p.ck2||0),db:Math.max(0,(p.total||0)-((p.ck1||0)+(p.ck2||0)))}));
+    document.getElementById('debtSalesTb').innerHTML=S.map((s,i)=>{
+      const sp=fpRaw.filter(p=>p.sId===s.id);
+      const ini=s.name.split(' ').map(x=>x[0]).slice(-2).join('').toUpperCase();
+      if(!sp.length)return`<tr><td><div style="display:flex;align-items:center;gap:7px"><div style="width:26px;height:26px;border-radius:50%;background:${SCOL[i%SCOL.length]};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#fff">${ini}</div><strong>${s.name}</strong></div></td><td colspan="6" style="color:var(--text3);font-size:12px">Không có dự án trong kỳ</td></tr>`;
+      const stc=sp.reduce((sum,p)=>sum+(p.total||0),0);const srv=sp.reduce((sum,p)=>sum+p.rv,0);const sdb=sp.reduce((sum,p)=>sum+p.db,0);
+      const sdebt=sp.filter(p=>p.db>0).length;const spct=stc?Math.round(srv/stc*100):0;
+      return`<tr><td><div style="display:flex;align-items:center;gap:7px"><div style="width:26px;height:26px;border-radius:50%;background:${SCOL[i%SCOL.length]};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#fff">${ini}</div><strong>${s.name}</strong></div></td>
+      <td class="mono">${sp.length}</td><td class="mono">${fmtM(stc)}</td><td class="mono" style="color:var(--green)">${fmtM(srv)}</td>
+      <td class="mono ${sdb>0?'loin neg':''}">${sdb>0?fmtM(sdb):'<span style="color:var(--green)">✅</span>'}</td>
+      <td><span style="font-weight:700;color:${sdebt>0?'var(--red)':'var(--green)'}">${sdebt}</span></td>
+      <td><div style="display:flex;align-items:center;gap:6px"><span class="mono" style="color:${spct>=80?'var(--green)':spct>=50?'var(--yellow)':'var(--red)'};min-width:36px">${spct}%</span><div style="flex:1;background:var(--border);border-radius:3px;height:6px;min-width:60px;overflow:hidden"><div style="width:${spct}%;height:100%;border-radius:3px;background:${spct>=80?'var(--green)':spct>=50?'var(--yellow)':'var(--red)'}"></div></div></div></td></tr>`;
+    }).join('');
+  } else { sbEl.style.display='none'; }
+  const ttlEl=document.getElementById('debtTableTitle');
+  if(ttlEl){const parts=['Chi tiết công nợ'];if(filterDesc&&filterDesc!=='Tất cả')parts.push(filterDesc);if(stF==='debt')parts.push('Còn nợ');if(stF==='paid')parts.push('Đã TT');ttlEl.textContent=parts.join(' – ');}
+  const cntEl=document.getElementById('debtTableCnt');if(cntEl)cntEl.textContent=dp.length+' dự án';
+  document.getElementById('debtTb').innerHTML=dp.length?dp.map(p=>{
+    const c=C.find(x=>x.id===p.cId);const pc=p.total?Math.round(p.rv/p.total*100):100;
+    return`<tr><td><strong>${c?c.name:'—'}</strong></td><td>${p.name}</td><td style="font-size:12px">${sName(p.sId)}</td>
+    <td class="mono">${fmtM(p.total)}</td>
+    <td><div class="mono" style="color:var(--green)">${fmtM(p.rv)}</div><div class="profit-bar"><div class="profit-fill" style="width:${pc}%"></div></div></td>
+    <td class="mono ${p.db>0?'loin neg':''}">${p.db>0?fmtM(p.db):'<span style="color:var(--green)">✅ Đủ</span>'}</td>
+    <td style="color:var(--text3);font-size:12px">${p.ed||'—'}</td>
+    <td><span class="badge ${p.db>0?'badge-contact':'badge-done'}">${p.db>0?'Còn nợ':'Đã TT'}</span></td>
+    <td><button class="btn btn-ghost btn-sm" onclick="editProj(${p.id})">✏️</button></td></tr>`;
+  }).join(''):'<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--text3)">Không có dữ liệu phù hợp</td></tr>';
+}
+
+// ===== SETTINGS & FIREBASE SETUP =====
+function renderSettings(){
+  loadFbConfigIntoForm();
+  updateFbStatusBar();
+  checkFbSetupBadge();
+}
+
+function loadFbConfigIntoForm(){
+  const cfg = getSavedFbConfig();
+  if(!cfg) return;
+  document.getElementById('fb_apiKey').value = cfg.apiKey||'';
+  document.getElementById('fb_authDomain').value = cfg.authDomain||'';
+  document.getElementById('fb_projectId').value = cfg.projectId||'';
+  document.getElementById('fb_storageBucket').value = cfg.storageBucket||'';
+  document.getElementById('fb_messagingSenderId').value = cfg.messagingSenderId||'';
+  document.getElementById('fb_appId').value = cfg.appId||'';
+  updateConfigPreview();
+}
+
+function getSavedFbConfig(){
+  try{ return JSON.parse(localStorage.getItem('crm_fb_config')||'null'); }catch(e){return null;}
+}
+
+function getFormFbConfig(){
+  return {
+    apiKey: document.getElementById('fb_apiKey').value.trim(),
+    authDomain: document.getElementById('fb_authDomain').value.trim(),
+    projectId: document.getElementById('fb_projectId').value.trim(),
+    storageBucket: document.getElementById('fb_storageBucket').value.trim(),
+    messagingSenderId: document.getElementById('fb_messagingSenderId').value.trim(),
+    appId: document.getElementById('fb_appId').value.trim()
+  };
+}
+
+function updateConfigPreview(){
+  const cfg = getFormFbConfig();
+  const hasAny = Object.values(cfg).some(v=>v);
+  const preview = document.getElementById('configPreview');
+  const code = document.getElementById('configPreviewCode');
+  if(!hasAny){preview.style.display='none';return;}
+  preview.style.display='block';
+  code.innerHTML = `<span class="punc">{</span>\n`+
+    Object.entries(cfg).map(([k,v])=>
+      `  <span class="key">${k}</span><span class="punc">: </span><span class="val">"${v||''}"</span>`
+    ).join('<span class="punc">,</span>\n')+
+    `\n<span class="punc">}</span>`;
+}
+
+// Listen to form changes for live preview
+['fb_apiKey','fb_authDomain','fb_projectId','fb_storageBucket','fb_messagingSenderId','fb_appId'].forEach(id=>{
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('input', updateConfigPreview);
+});
+
+function saveFbConfig(){
+  const cfg = getFormFbConfig();
+  if(!cfg.apiKey||!cfg.projectId){
+    showFbTestResult('err','⚠️ Vui lòng nhập ít nhất API Key và Project ID');
+    return;
+  }
+  localStorage.setItem('crm_fb_config', JSON.stringify(cfg));
+  showFbTestResult('ok','💾 Đã lưu config! Đang kết nối lại Firebase...');
+  updateFbStatusBar();
+  checkFbSetupBadge();
+  // Re-init Firebase with new config
+  setTimeout(()=>{ reinitFirebase(cfg); }, 500);
+}
+
+function clearFbConfig(){
+  if(!confirm('Xóa cấu hình Firebase? App sẽ chạy ở chế độ offline (localStorage).'))return;
+  localStorage.removeItem('crm_fb_config');
+  ['fb_apiKey','fb_authDomain','fb_projectId','fb_storageBucket','fb_messagingSenderId','fb_appId'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  document.getElementById('configPreview').style.display='none';
+  updateFbStatusBar(false, 'Đã xóa config – đang chạy offline');
+  checkFbSetupBadge();
+  showFbTestResult('ok','✅ Đã xóa config Firebase. App đang dùng localStorage.');
+}
+
+function updateFbStatusBar(connected, msg){
+  const bar = document.getElementById('fbStatusBar');
+  const txt = document.getElementById('fbStatusTxt');
+  if(!bar||!txt) return;
+  if(connected===undefined){
+    // Auto detect
+    const isConnected = window._fbReady === true;
+    const hasCfg = !!getSavedFbConfig();
+    if(isConnected){
+      bar.className='fb-status-bar connected';
+      txt.textContent='✅ Firebase đã kết nối – Dữ liệu đồng bộ realtime';
+    } else if(hasCfg){
+      bar.className='fb-status-bar disconnected';
+      txt.textContent='❌ Có config nhưng chưa kết nối được Firebase';
+    } else {
+      bar.className='fb-status-bar unknown';
+      txt.textContent='⚙️ Chưa cấu hình Firebase – Đang dùng localStorage';
+    }
+  } else {
+    bar.className='fb-status-bar '+(connected?'connected':'disconnected');
+    txt.textContent=msg||(connected?'✅ Firebase đã kết nối':'❌ Không kết nối được');
+  }
+}
+
+async function testFbConnection(){
+  const btn = event.target;
+  const origTxt = btn.textContent;
+  btn.textContent='⏳ Đang test...';btn.disabled=true;
+  const cfg = getFormFbConfig();
+  if(!cfg.apiKey||!cfg.projectId){
+    showFbTestResult('err','⚠️ Nhập đầy đủ API Key và Project ID trước');
+    btn.textContent=origTxt;btn.disabled=false;
+    return;
+  }
+  try {
+    const testUrl=`https://firestore.googleapis.com/v1/projects/${cfg.projectId}/databases/(default)/documents/crm?pageSize=1&key=${cfg.apiKey}`;
+    const res=await fetch(testUrl,{method:'GET'});
+    if(res.ok||res.status===404){
+      showFbTestResult('ok','✅ Kết nối Firebase thành công! Project ID hợp lệ.');
+      updateFbStatusBar(true,'✅ Test thành công – Firebase hoạt động');
+    } else if(res.status===403){
+      showFbTestResult('err','🔒 Lỗi 403: Kiểm tra Firestore Security Rules (cần set allow read, write: if true)');
+    } else if(res.status===400){
+      showFbTestResult('err','❌ Lỗi 400: API Key hoặc Project ID không đúng');
+    } else {
+      showFbTestResult('err',`❌ Lỗi ${res.status}: Kiểm tra lại thông tin config`);
+    }
+  } catch(e){
+    showFbTestResult('err','❌ Không thể kết nối. Kiểm tra lại API Key hoặc Project ID: '+e.message);
+  }
+  btn.textContent=origTxt;btn.disabled=false;
+}
+
+function showFbTestResult(type, msg){
+  const el=document.getElementById('fbTestResult');
+  if(!el)return;
+  el.className='test-result '+type;
+  el.textContent=msg;
+  el.style.display='block';
+  if(type==='ok') setTimeout(()=>el.style.display='none',6000);
+}
+
+function checkFbSetupBadge(){
+  const hasCfg = !!getSavedFbConfig()?.apiKey;
+  const badge = document.getElementById('fbSetupBadge');
+  if(badge) badge.style.display = hasCfg ? 'none' : 'inline';
+}
+
+function parseFbPaste(){
+  const raw = document.getElementById('fbPasteBox').value;
+  const result = document.getElementById('parseResult');
+  try {
+    // Extract the object content
+    const match = raw.match(/\{([^}]+)\}/s);
+    if(!match) throw new Error('Không tìm thấy object {...}');
+    const obj = {};
+    const pairs = match[1].matchAll(/(\w+)\s*:\s*["']([^"']+)["']/g);
+    for(const [,k,v] of pairs) obj[k]=v;
+    if(!obj.apiKey) throw new Error('Không tìm thấy apiKey');
+    // Fill form
+    if(obj.apiKey) document.getElementById('fb_apiKey').value=obj.apiKey;
+    if(obj.authDomain) document.getElementById('fb_authDomain').value=obj.authDomain;
+    if(obj.projectId) document.getElementById('fb_projectId').value=obj.projectId;
+    if(obj.storageBucket) document.getElementById('fb_storageBucket').value=obj.storageBucket;
+    if(obj.messagingSenderId) document.getElementById('fb_messagingSenderId').value=obj.messagingSenderId;
+    if(obj.appId) document.getElementById('fb_appId').value=obj.appId;
+    updateConfigPreview();
+    result.className='test-result ok';
+    result.textContent='✅ Parse thành công! Kiểm tra lại các field và nhấn Lưu & Kết nối.';
+    result.style.display='block';
+  } catch(e) {
+    result.className='test-result err';
+    result.textContent='❌ Lỗi parse: '+e.message+'. Hãy paste toàn bộ đoạn firebaseConfig = {...}';
+    result.style.display='block';
+  }
+}
+
+function copyRules(){
+  const rules = `rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /crm/{doc} {
+      allow read, write: if true;
+    }
+  }
+}`;
+  navigator.clipboard.writeText(rules).then(()=>{
+    const btn = event.target;
+    btn.textContent='✅ Copied!';
+    setTimeout(()=>btn.textContent='📋 Copy',2000);
+  }).catch(()=>alert('Copy thủ công:\n'+rules));
+}
+
+function reinitFirebase(cfg){
+  // Dynamically reload Firebase with new config
+  // Since ES modules can't be re-imported, we reload via script injection
+  window._fbReady = false;
+  const script = document.createElement('script');
+  script.type = 'module';
+  script.textContent = `
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+    import { getFirestore, doc, setDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+    try {
+      const cfg = ${JSON.stringify(cfg)};
+      const app = initializeApp(cfg, 'crm-reinit-'+Date.now());
+      const db = getFirestore(app);
+      window._fbReady = true;
+      window._fbSave = async function(C,P,S){
+        try{
+          await setDoc(doc(db,'crm','data'),{C,P,S,updatedAt:Date.now()});
+          const s=document.getElementById('syncStatus');const t=document.getElementById('syncTxt');
+          if(s){s.style.display='flex';s.className='ok';t.textContent='✓ Đã lưu cloud';}
+          setTimeout(()=>{if(s)s.style.display='none';},3000);
+        }catch(e){console.warn('Save fail',e);}
+      };
+      onSnapshot(doc(db,'crm','data'),(snap)=>{
+        if(snap.exists()){
+          const d=snap.data();
+          if(d.C)window.C=d.C;if(d.P)window.P=d.P;if(d.S)window.S=d.S;
+          localStorage.setItem('crm_c',JSON.stringify(window.C));
+          localStorage.setItem('crm_p',JSON.stringify(window.P));
+          localStorage.setItem('crm_s',JSON.stringify(window.S));
+          if(window._crmReady){window.updBadge();window.render(window.curPg());}
+          const el=document.getElementById('fbStatusBar');const t=document.getElementById('fbStatusTxt');
+          if(el){el.className='fb-status-bar connected';t.textContent='✅ Firebase đã kết nối – Dữ liệu đồng bộ realtime';}
+        }
+      });
+      // Trigger initial push of local data
+      if(window.C&&window.P&&window.S){window._fbSave(window.C,window.P,window.S);}
+      console.log('[Firebase] Re-initialized successfully');
+    } catch(e) {
+      console.warn('[Firebase] Reinit failed:',e);
+      const el=document.getElementById('fbStatusBar');const t=document.getElementById('fbStatusTxt');
+      if(el){el.className='fb-status-bar disconnected';t.textContent='❌ Kết nối thất bại: '+e.message;}
+      const r=document.getElementById('fbTestResult');
+      if(r){r.className='test-result err';r.textContent='❌ Lỗi kết nối: '+e.message;r.style.display='block';}
+    }
+  `;
+  document.head.appendChild(script);
+}
+
+// Auto-load saved config on startup
+window.addEventListener('DOMContentLoaded', ()=>{
+  const cfg = getSavedFbConfig();
+  if(cfg?.apiKey) {
+    setTimeout(()=>reinitFirebase(cfg), 800);
+  }
+  checkFbSetupBadge();
+});
+
+// ===== RESPONSIVE FIXES =====
+function handleResize(){
+  const isMobile = window.innerWidth <= 768;
+  document.getElementById('mobileNav').style.display = isMobile && document.getElementById('appRoot').style.display!=='none' ? 'block' : 'none';
+  const dg=document.querySelector('.dash-grid');
+  if(dg)dg.style.gridTemplateColumns=isMobile?'1fr':'1.4fr 1fr';
+  const fg=document.querySelector('.fu-grid');
+  if(fg)fg.style.gridTemplateColumns=isMobile?'1fr':'1fr 1fr';
+}
+window.addEventListener('resize', handleResize);
+</script>
+</body>
+</html>
