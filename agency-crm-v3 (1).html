@@ -870,29 +870,18 @@ textarea{resize:vertical;min-height:65px;}
 
 <!-- Firebase SDK -->
 <script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, doc, setDoc, onSnapshot, collection, getDocs } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { initializeApp, getApps, deleteApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, setDoc, onSnapshot, collection, getDocs, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
-// ============================================================
-// 🔥 FIREBASE CONFIG – Thay thế bằng config của bạn tại:
-//    https://console.firebase.google.com → Project Settings → Your apps
-// ============================================================
-const firebaseConfig = {
-  apiKey: "AIzaSyDEMO_REPLACE_WITH_YOUR_KEY",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project.appspot.com",
-  messagingSenderId: "000000000000",
-  appId: "1:000000000000:web:abc123"
-};
-// ============================================================
+// ─── Shared state ────────────────────────────────────────────
+let _db = null;
+let _unsubscribe = null;   // keep listener ref to detach on reinit
+let _appInstance = null;
 
-let db = null;
-let fbReady = false;
-
+// ─── Sync UI helper ──────────────────────────────────────────
 function showSync(state, txt) {
   const el = document.getElementById('syncStatus');
-  const t = document.getElementById('syncTxt');
+  const t  = document.getElementById('syncTxt');
   if(!el) return;
   el.style.display = 'flex';
   el.className = state;
@@ -900,68 +889,113 @@ function showSync(state, txt) {
   if(state === 'ok') setTimeout(() => { el.style.display = 'none'; }, 3000);
 }
 
-async function initFirebase() {
-  try {
-    const app = initializeApp(firebaseConfig);
-    db = getFirestore(app);
-    fbReady = true;
-    window._fbDb = db;
-    window._fbReady = true;
-    window._fbSetDoc = setDoc;
-    window._fbDoc = doc;
-    window._fbOnSnapshot = onSnapshot;
-    window._fbCollection = collection;
-    window._fbGetDocs = getDocs;
-    showSync('ok', '✓ Firebase kết nối');
-    // Setup realtime listener after login
-    window._fbSetupListeners = setupListeners;
-    console.log('[Firebase] Connected');
-  } catch(e) {
-    console.warn('[Firebase] Init failed:', e.message);
-    fbReady = false;
-    window._fbReady = false;
-    showSync('err', '⚠ Offline mode');
-  }
-}
-
-function setupListeners() {
-  if(!db) return;
-  // Listen for changes from other devices
-  onSnapshot(doc(db, 'crm', 'data'), (snap) => {
-    if(snap.exists()) {
-      const d = snap.data();
-      if(d.C) { window.C = d.C; }
-      if(d.P) { window.P = d.P; }
-      if(d.S) { window.S = d.S; }
-      // Save to localStorage as cache
-      localStorage.setItem('crm_c', JSON.stringify(window.C));
-      localStorage.setItem('crm_p', JSON.stringify(window.P));
-      localStorage.setItem('crm_s', JSON.stringify(window.S));
-      if(window._crmReady) {
-        window.updBadge();
-        window.render(window.curPg());
-        showSync('ok', '✓ Đã đồng bộ');
+// ─── Attach realtime listener ────────────────────────────────
+function attachListener(db) {
+  if(_unsubscribe) { try{ _unsubscribe(); }catch(e){} }
+  _unsubscribe = onSnapshot(
+    doc(db, 'crm', 'data'),
+    (snap) => {
+      if(snap.exists()) {
+        const d = snap.data();
+        if(d.C) window.C = d.C;
+        if(d.P) window.P = d.P;
+        if(d.S) window.S = d.S;
+        localStorage.setItem('crm_c', JSON.stringify(window.C));
+        localStorage.setItem('crm_p', JSON.stringify(window.P));
+        localStorage.setItem('crm_s', JSON.stringify(window.S));
+        if(window._crmReady) {
+          window.updBadge();
+          window.render(window.curPg());
+          showSync('ok', '✓ Đã đồng bộ');
+        }
+        // Update status bar if on settings page
+        const bar = document.getElementById('fbStatusBar');
+        const txt = document.getElementById('fbStatusTxt');
+        if(bar){ bar.className='fb-status-bar connected'; txt.textContent='✅ Firebase đã kết nối – Dữ liệu đồng bộ realtime'; }
       }
+    },
+    (err) => {
+      console.warn('[Firebase] Listener error:', err);
+      showSync('err', '⚠ Lỗi đồng bộ');
     }
-  }, (err) => {
-    console.warn('[Firebase] Listener error:', err);
-    showSync('err', '⚠ Lỗi đồng bộ');
-  });
+  );
 }
 
-window._fbSave = async function(C, P, S) {
-  if(!db) return;
-  showSync('syncing', '↑ Đang lưu...');
+// ─── Core init (accepts any config object) ───────────────────
+async function doInitFirebase(cfg) {
   try {
-    await setDoc(doc(db, 'crm', 'data'), { C, P, S, updatedAt: Date.now() });
-    showSync('ok', '✓ Đã lưu lên cloud');
+    // Destroy previous app instance to avoid "duplicate app" errors
+    if(_appInstance) {
+      try { await deleteApp(_appInstance); } catch(e) {}
+      _appInstance = null;
+      _db = null;
+      window._fbReady = false;
+    }
+
+    _appInstance = initializeApp(cfg, 'crm-app-' + Date.now());
+    _db = getFirestore(_appInstance);
+
+    // Quick connectivity probe – write a tiny test doc
+    // (we use the user's data doc with merge:false probe; use getDoc instead)
+    await getDoc(doc(_db, 'crm', 'data'));   // throws if rules/network fail
+
+    window._fbDb    = _db;
+    window._fbReady = true;
+
+    // Re-expose save helper
+    window._fbSave = async function(C, P, S) {
+      if(!_db) return;
+      showSync('syncing', '↑ Đang lưu...');
+      try {
+        await setDoc(doc(_db, 'crm', 'data'), { C, P, S, updatedAt: Date.now() });
+        showSync('ok', '✓ Đã lưu lên cloud');
+      } catch(e) {
+        console.warn('[Firebase] Save failed:', e);
+        showSync('err', '⚠ Lưu thất bại – ' + e.code);
+      }
+    };
+
+    attachListener(_db);
+
+    // Push current local data to cloud on first connect
+    if(window.C && window.P && window.S) {
+      window._fbSave(window.C, window.P, window.S);
+    }
+
+    showSync('ok', '✓ Firebase kết nối');
+    console.log('[Firebase] Connected OK');
+    return { ok: true };
   } catch(e) {
-    console.warn('[Firebase] Save failed:', e);
-    showSync('err', '⚠ Lưu thất bại');
+    console.warn('[Firebase] Init failed:', e.message, e.code);
+    window._fbReady = false;
+    _db = null;
+    showSync('err', '⚠ Offline – ' + (e.code || e.message));
+    return { ok: false, error: e };
   }
+}
+
+// ─── Exposed helpers used by vanilla-JS layer ─────────────────
+// Called by showApp() after login
+window._fbSetupListeners = function() {
+  if(_db) attachListener(_db);
 };
 
-initFirebase();
+// Called by saveFbConfig() and auto-startup
+window._fbReinit = async function(cfg) {
+  return doInitFirebase(cfg);
+};
+
+// ─── Auto-startup: load saved config immediately ──────────────
+(async function autoStart() {
+  let cfg = null;
+  try { cfg = JSON.parse(localStorage.getItem('crm_fb_config') || 'null'); } catch(e) {}
+  if(cfg && cfg.apiKey && cfg.projectId) {
+    await doInitFirebase(cfg);
+  } else {
+    showSync('err', '⚠ Chưa cấu hình Firebase');
+    setTimeout(() => { document.getElementById('syncStatus').style.display='none'; }, 3000);
+  }
+})();
 </script>
 
 <script>
@@ -1628,14 +1662,14 @@ function updateConfigPreview(){
   if(el) el.addEventListener('input', updateConfigPreview);
 });
 
-function saveFbConfig(){
+async function saveFbConfig(){
   const cfg = getFormFbConfig();
   if(!cfg.apiKey||!cfg.projectId){
     showFbTestResult('err','⚠️ Vui lòng nhập ít nhất API Key và Project ID');
     return;
   }
   localStorage.setItem('crm_fb_config', JSON.stringify(cfg));
-  showFbTestResult('ok','💾 Đã lưu config! Đang kết nối lại Firebase...');
+  showFbTestResult('ok','💾 Đã lưu config! Đang kết nối...');
   updateFbStatusBar();
   checkFbSetupBadge();
   // Re-init Firebase with new config
@@ -1688,21 +1722,35 @@ async function testFbConnection(){
     btn.textContent=origTxt;btn.disabled=false;
     return;
   }
-  try {
-    const testUrl=`https://firestore.googleapis.com/v1/projects/${cfg.projectId}/databases/(default)/documents/crm?pageSize=1&key=${cfg.apiKey}`;
-    const res=await fetch(testUrl,{method:'GET'});
-    if(res.ok||res.status===404){
-      showFbTestResult('ok','✅ Kết nối Firebase thành công! Project ID hợp lệ.');
-      updateFbStatusBar(true,'✅ Test thành công – Firebase hoạt động');
-    } else if(res.status===403){
-      showFbTestResult('err','🔒 Lỗi 403: Kiểm tra Firestore Security Rules (cần set allow read, write: if true)');
-    } else if(res.status===400){
-      showFbTestResult('err','❌ Lỗi 400: API Key hoặc Project ID không đúng');
-    } else {
-      showFbTestResult('err',`❌ Lỗi ${res.status}: Kiểm tra lại thông tin config`);
-    }
-  } catch(e){
-    showFbTestResult('err','❌ Không thể kết nối. Kiểm tra lại API Key hoặc Project ID: '+e.message);
+  if(!window._fbReinit){
+    showFbTestResult('err','❌ Firebase SDK chưa sẵn sàng. Chờ vài giây rồi thử lại.');
+    btn.textContent=origTxt;btn.disabled=false;
+    return;
+  }
+  showFbTestResult('ok','⏳ Đang kết nối thử...');
+  const result = await window._fbReinit(cfg);
+  if(result.ok){
+    showFbTestResult('ok','✅ Kết nối Firebase thành công! API Key & Project ID hợp lệ.');
+    updateFbStatusBar(true,'✅ Test thành công – Firebase hoạt động');
+    // Auto-save config after successful test
+    localStorage.setItem('crm_fb_config', JSON.stringify(cfg));
+    checkFbSetupBadge();
+  } else {
+    const errMsg = result.error ? (result.error.code || result.error.message) : 'Lỗi không xác định';
+    let hint = '';
+    if(errMsg.includes('api-key') || errMsg.includes('API_KEY') || errMsg.includes('invalid-api-key'))
+      hint = '<br>👉 Kiểm tra lại <strong>API Key</strong> trong Firebase Console → Project Settings';
+    else if(errMsg.includes('project') || errMsg.includes('not-found'))
+      hint = '<br>👉 Kiểm tra lại <strong>Project ID</strong> – phải khớp chính xác với tên project';
+    else if(errMsg.includes('permission') || errMsg.includes('PERMISSION_DENIED') || errMsg.includes('insufficient'))
+      hint = '<br>👉 Vào <strong>Firestore → Rules</strong> → đổi thành <code>allow read, write: if true;</code> → Publish';
+    else if(errMsg.includes('network') || errMsg.includes('Failed to fetch') || errMsg.includes('offline'))
+      hint = '<br>👉 Kiểm tra <strong>kết nối mạng</strong> hoặc thử lại sau';
+    else if(errMsg.includes('auth'))
+      hint = '<br>👉 Kiểm tra <strong>authDomain</strong> và <strong>apiKey</strong>';
+    showFbTestResult('err', '❌ Lỗi: ' + errMsg + (hint ? '<br>' + hint : ''));
+    document.getElementById('fbTestResult').innerHTML = '❌ Lỗi: ' + errMsg + hint;
+    updateFbStatusBar(false,'❌ Kết nối thất bại: ' + errMsg);
   }
   btn.textContent=origTxt;btn.disabled=false;
 }
@@ -1767,60 +1815,39 @@ service cloud.firestore {
   }).catch(()=>alert('Copy thủ công:\n'+rules));
 }
 
-function reinitFirebase(cfg){
-  // Dynamically reload Firebase with new config
-  // Since ES modules can't be re-imported, we reload via script injection
-  window._fbReady = false;
-  const script = document.createElement('script');
-  script.type = 'module';
-  script.textContent = `
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-    import { getFirestore, doc, setDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-    try {
-      const cfg = ${JSON.stringify(cfg)};
-      const app = initializeApp(cfg, 'crm-reinit-'+Date.now());
-      const db = getFirestore(app);
-      window._fbReady = true;
-      window._fbSave = async function(C,P,S){
-        try{
-          await setDoc(doc(db,'crm','data'),{C,P,S,updatedAt:Date.now()});
-          const s=document.getElementById('syncStatus');const t=document.getElementById('syncTxt');
-          if(s){s.style.display='flex';s.className='ok';t.textContent='✓ Đã lưu cloud';}
-          setTimeout(()=>{if(s)s.style.display='none';},3000);
-        }catch(e){console.warn('Save fail',e);}
-      };
-      onSnapshot(doc(db,'crm','data'),(snap)=>{
-        if(snap.exists()){
-          const d=snap.data();
-          if(d.C)window.C=d.C;if(d.P)window.P=d.P;if(d.S)window.S=d.S;
-          localStorage.setItem('crm_c',JSON.stringify(window.C));
-          localStorage.setItem('crm_p',JSON.stringify(window.P));
-          localStorage.setItem('crm_s',JSON.stringify(window.S));
-          if(window._crmReady){window.updBadge();window.render(window.curPg());}
-          const el=document.getElementById('fbStatusBar');const t=document.getElementById('fbStatusTxt');
-          if(el){el.className='fb-status-bar connected';t.textContent='✅ Firebase đã kết nối – Dữ liệu đồng bộ realtime';}
-        }
-      });
-      // Trigger initial push of local data
-      if(window.C&&window.P&&window.S){window._fbSave(window.C,window.P,window.S);}
-      console.log('[Firebase] Re-initialized successfully');
-    } catch(e) {
-      console.warn('[Firebase] Reinit failed:',e);
-      const el=document.getElementById('fbStatusBar');const t=document.getElementById('fbStatusTxt');
-      if(el){el.className='fb-status-bar disconnected';t.textContent='❌ Kết nối thất bại: '+e.message;}
-      const r=document.getElementById('fbTestResult');
-      if(r){r.className='test-result err';r.textContent='❌ Lỗi kết nối: '+e.message;r.style.display='block';}
-    }
-  `;
-  document.head.appendChild(script);
+async function reinitFirebase(cfg){
+  if(!window._fbReinit){
+    showFbTestResult('err','❌ Firebase SDK chưa load xong. Thử lại sau 2 giây.');
+    return;
+  }
+  showFbTestResult('ok','⏳ Đang kết nối Firebase...');
+  const bar = document.getElementById('fbStatusBar');
+  const txt = document.getElementById('fbStatusTxt');
+  if(bar){ bar.className='fb-status-bar unknown'; txt.textContent='⏳ Đang kết nối...'; }
+
+  const result = await window._fbReinit(cfg);
+
+  if(result.ok){
+    if(bar){ bar.className='fb-status-bar connected'; txt.textContent='✅ Firebase đã kết nối – Dữ liệu đồng bộ realtime'; }
+    showFbTestResult('ok','✅ Kết nối Firebase thành công! Dữ liệu đang đồng bộ realtime.');
+  } else {
+    const errMsg = result.error ? (result.error.code || result.error.message) : 'Lỗi không xác định';
+    if(bar){ bar.className='fb-status-bar disconnected'; txt.textContent='❌ Kết nối thất bại: ' + errMsg; }
+    let hint = '';
+    if(errMsg.includes('api-key') || errMsg.includes('API_KEY') || errMsg.includes('invalid-api-key'))
+      hint = ' → Kiểm tra lại API Key';
+    else if(errMsg.includes('project') || errMsg.includes('not-found'))
+      hint = ' → Kiểm tra lại Project ID';
+    else if(errMsg.includes('permission') || errMsg.includes('PERMISSION_DENIED') || errMsg.includes('insufficient'))
+      hint = ' → Vào Firestore → Rules → set allow read, write: if true → Publish';
+    else if(errMsg.includes('network') || errMsg.includes('Failed to fetch') || errMsg.includes('offline'))
+      hint = ' → Kiểm tra kết nối mạng';
+    showFbTestResult('err', '❌ Lỗi: ' + errMsg + hint);
+  }
 }
 
-// Auto-load saved config on startup
+// Auto-load: Firebase module handles init; just update badge on DOM ready
 window.addEventListener('DOMContentLoaded', ()=>{
-  const cfg = getSavedFbConfig();
-  if(cfg?.apiKey) {
-    setTimeout(()=>reinitFirebase(cfg), 800);
-  }
   checkFbSetupBadge();
 });
 
